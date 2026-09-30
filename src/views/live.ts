@@ -249,7 +249,7 @@ body { overflow: hidden; }
 .total {
 	margin: 0;
 	font-weight: 900;
-	font-size: clamp(64px, min(15vw, 22vh), 280px);
+	font-size: clamp(64px, min(15vw, 22vh), 280px); /* the ceiling; fitTotal() shrinks it to fit */
 	line-height: 0.9;
 	letter-spacing: -0.03em;
 	color: var(--cinza);
@@ -257,7 +257,10 @@ body { overflow: hidden; }
 	white-space: nowrap;
 }
 .total .cur { font-size: 0.4em; letter-spacing: 0; margin-right: 0.12em; color: var(--teal); vertical-align: 0.9em; }
-.count { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(18px, 3vh, 36px); color: var(--cinza-muted); }
+/* The count reads as part of the figure — "R$ 17.550  32 doações" — sharing
+   its baseline, and drops below only when the number needs the whole row. */
+.figure { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: clamp(16px, 2vw, 32px); row-gap: 8px; }
+.count { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; font-size: clamp(18px, 3vh, 36px); color: var(--cinza-muted); }
 .count strong { font-weight: 600; color: var(--cinza); }
 
 .goal { display: grid; gap: 10px; max-width: 64rem; margin-top: clamp(4px, 1vh, 12px); }
@@ -389,8 +392,10 @@ body { overflow: hidden; }
 		</header>
 
 		<div class="total-block">
-			<p class="total" aria-live="polite"><span class="cur">R$</span><span id="total">${formatReais(summary.totalCents).replace(/^R\$\s*/, "")}</span></p>
-			<p class="count"><strong id="count">${countLabel(summary.count)}</strong></p>
+			<div class="figure">
+				<p class="total" id="total-line" aria-live="polite"><span class="cur">R$</span><span id="total">${formatReais(summary.totalCents).replace(/^R\$\s*/, "")}</span></p>
+				<p class="count" id="count-line"><strong id="count">${countLabel(summary.count)}</strong></p>
+			</div>
 			${goalBlock(page, summary.totalCents)}
 		</div>
 
@@ -461,6 +466,32 @@ function countUp(to) {
 	countFrame = requestAnimationFrame(tick);
 }
 
+// The number is as big as the row allows: the CSS size is the ceiling, and
+// long totals shrink to fit — beside the count when there is room, alone on
+// the row when there is not. Fitted to the target so a count-up never overflows.
+function fitTotal(cents) {
+	const line = $("total-line"), digits = $("total"), count = $("count-line");
+	const shown = digits.textContent;
+	digits.textContent = number.format(Math.round(cents / 100));
+	line.style.removeProperty("font-size");
+	const ceiling = parseFloat(getComputedStyle(line).fontSize);
+	const perPx = line.offsetWidth / ceiling;
+	const row = line.parentElement.clientWidth;
+	const gap = parseFloat(getComputedStyle(line.parentElement).columnGap) || 0;
+	const beside = (row - count.offsetWidth - gap) / perPx;
+	// Keep the count beside the number unless that costs more than a third of its size.
+	const size = beside >= ceiling * 0.66 ? Math.min(ceiling, beside) : Math.min(ceiling, row / perPx);
+	line.style.fontSize = Math.floor(size) + "px";
+	digits.textContent = shown;
+}
+// Metrics change once Neris replaces the fallback font.
+document.fonts?.ready.then(() => fitTotal(state.summary.totalCents));
+let resizeFrame = 0;
+addEventListener("resize", () => {
+	cancelAnimationFrame(resizeFrame);
+	resizeFrame = requestAnimationFrame(() => fitTotal(state.summary.totalCents));
+});
+
 function renderGoal(totalCents) {
 	$("goal").hidden = !state.goalCents;
 	if (!state.goalCents) return;
@@ -486,22 +517,36 @@ function spark(delay) {
 	if (!svg || getComputedStyle(svg).display === "none") return;
 	const box = svg.getBoundingClientRect();
 	const cell = HEX.w * HEX.scale;
-	const keepClear = [...document.querySelectorAll(".invite .hex, .caption")]
+	const halfW = cell / 2;
+	const halfH = (HEX.h / 2) * HEX.scale;
+	// Everything a lit cell must not sit under or on top of, including the demo
+	// controls, which float over the panel.
+	const keepClear = [...document.querySelectorAll(".invite .hex, .caption, #demo, .demo-badge")]
 		.map((el) => el.getBoundingClientRect());
-	for (let tries = 0; tries < 40; tries++) {
-		const rowIdx = Math.floor(Math.random() * (box.height / (HEX.row * HEX.scale) + 1));
-		const colIdx = Math.floor(Math.random() * (box.width / cell + 1));
-		const x = colIdx * HEX.w + (rowIdx % 2 ? HEX.w / 2 : 0);
-		const y = rowIdx * HEX.row;
-		const cx = box.left + (x + HEX.w / 2) * HEX.scale;
-		const cy = box.top + (y + HEX.h / 2) * HEX.scale;
-		const halfH = (HEX.h / 2) * HEX.scale;
-		const inside = cx > box.left + cell / 2 && cx < box.right - cell / 2 &&
-			cy > box.top + halfH && cy < box.bottom - halfH;
-		const blocked = keepClear.some((r) =>
-			cx > r.left - cell / 2 && cx < r.right + cell / 2 && cy > r.top - cell / 2 && cy < r.bottom + cell / 2);
-		if (!inside || blocked) continue;
+	const lit = new Set([...$("sparks").children].map((u) => u.getAttribute("x") + "," + u.getAttribute("y")));
 
+	// List every free cell and pick one, instead of guessing: guessing could
+	// give up on a crowded panel and a donation went by with no highlight.
+	const free = [];
+	const rows = Math.ceil(box.height / (HEX.row * HEX.scale)) + 1;
+	const cols = Math.ceil(box.width / cell) + 1;
+	for (let rowIdx = 0; rowIdx < rows; rowIdx++) {
+		for (let colIdx = -1; colIdx < cols; colIdx++) {
+			const x = colIdx * HEX.w + (rowIdx % 2 ? HEX.w / 2 : 0);
+			const y = rowIdx * HEX.row;
+			const cx = box.left + (x + HEX.w / 2) * HEX.scale;
+			const cy = box.top + (y + HEX.h / 2) * HEX.scale;
+			const inside = cx - halfW >= box.left && cx + halfW <= box.right &&
+				cy - halfH >= box.top && cy + halfH <= box.bottom;
+			const blocked = keepClear.some((r) =>
+				cx + halfW > r.left && cx - halfW < r.right && cy + halfH > r.top && cy - halfH < r.bottom);
+			if (inside && !blocked && !lit.has(x + "," + y)) free.push({ x, y });
+		}
+	}
+	const pick = free[Math.floor(Math.random() * free.length)];
+	if (!pick) return;
+	{
+		const { x, y } = pick;
 		const hex = document.createElementNS("http://www.w3.org/2000/svg", "use");
 		hex.setAttribute("href", "#hx");
 		hex.setAttribute("x", x);
@@ -512,15 +557,15 @@ function spark(delay) {
 		$("sparks").append(hex);
 		const pop = "cubic-bezier(0.23, 1, 0.32, 1)";
 		const frames = reduced
-			? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }]
+			? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.82 }, { opacity: 0 }]
 			: [
 				{ opacity: 0, transform: "scale(0.6)", easing: pop },
-				{ opacity: 1, transform: "scale(1)", offset: 0.12 },
-				{ opacity: 1, transform: "scale(1)", offset: 0.55, easing: "ease-in-out" },
-				{ opacity: 0, transform: "scale(1)" },
+				{ opacity: 1, transform: "scale(1)", offset: 0.1 },
+				// Short exit: a palette colour half-faded over turquoise reads muddy.
+				{ opacity: 1, transform: "scale(1)", offset: 0.82, easing: "ease-in" },
+				{ opacity: 0, transform: "scale(0.85)" },
 			];
 		hex.animate(frames, { duration: 3200, delay, fill: "backwards" }).onfinish = () => hex.remove();
-		return;
 	}
 }
 
@@ -560,8 +605,9 @@ function renderRecent(prev, next) {
 
 function render(next) {
 	const prev = state.summary;
-	if (next.totalCents !== prev.totalCents) countUp(next.totalCents);
 	$("count").textContent = countLabel(next.count);
+	fitTotal(Math.max(next.totalCents, shownCents));
+	if (next.totalCents !== prev.totalCents) countUp(next.totalCents);
 
 	renderGoal(next.totalCents);
 

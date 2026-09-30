@@ -25,16 +25,10 @@ const LATTICE = `<svg class="lattice" aria-hidden="true">
 				<use href="#hx" x="${-HEX_W / 2}" y="${HEX_ROW}"/>
 			</g>
 		</pattern>
-		<!-- Lattice fades out toward the QR so it never competes with it; sparks stay solid. -->
-		<radialGradient id="fade" cx="0.5" cy="0.42" r="0.6">
-			<stop offset="0.35" stop-color="#000"/>
-			<stop offset="0.9" stop-color="#FFF"/>
-		</radialGradient>
-		<mask id="edges"><rect width="100%" height="100%" fill="url(#fade)"/></mask>
 	</defs>
-	<rect width="100%" height="100%" fill="url(#hexes)" mask="url(#edges)"/>
-	<g id="sparks" transform="scale(${LATTICE_SCALE})"></g>
-</svg>`;
+	<rect width="100%" height="100%" fill="url(#hexes)"/>
+</svg>
+<svg class="sparks" aria-hidden="true"><g id="sparks" transform="scale(${LATTICE_SCALE})"></g></svg>`;
 
 interface LiveView {
 	page: PageConfig;
@@ -325,9 +319,14 @@ body { overflow: hidden; }
 	color: var(--cinza); /* 7.0:1 on turquoise — white would be 1.7:1 */
 	text-align: center;
 }
-.lattice {
+.lattice, .sparks {
 	position: absolute; inset: 0; z-index: -1;
 	width: 100%; height: 100%;
+}
+.lattice {
+	/* The lattice dissolves around the caption, so no line crosses the text; the
+	   white hexagon already covers it behind the QR. Position set by clearCaption(). */
+	mask-image: radial-gradient(ellipse var(--rx, 0) var(--ry, 0) at var(--cx, 50%) var(--cy, 85%), transparent 55%, #000 100%);
 }
 .hex { position: relative; width: min(28vw, 58vh); aspect-ratio: 175.205 / 194.264; }
 .hex svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -337,13 +336,7 @@ body { overflow: hidden; }
 	width: 62%; height: auto; aspect-ratio: 1; left: 19%; top: 50%; translate: 0 -50%;
 	image-rendering: pixelated;
 }
-.caption {
-	/* Solid plate: no lattice line may cross the text. */
-	display: grid; gap: clamp(8px, 1.5vh, 16px);
-	padding: clamp(12px, 2vh, 20px) clamp(16px, 2vw, 28px);
-	border-radius: 20px;
-	background: var(--turquesa);
-}
+.caption { display: grid; gap: clamp(8px, 1.5vh, 16px); }
 .invite p { margin: 0; text-wrap: balance; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
 .invite .link { font-weight: 600; font-size: clamp(15px, 2vh, 22px); color: var(--turquesa-deep); word-break: break-all; }
 .invite .donate { display: none; }
@@ -366,7 +359,7 @@ body { overflow: hidden; }
 		background: var(--branco-puro);
 		box-shadow: 0 -1px 0 rgb(55 54 54 / 0.08), 0 -8px 24px rgb(30 115 135 / 0.08);
 	}
-	.invite .hex, .caption, .lattice { display: none; }
+	.invite .hex, .caption, .lattice, .sparks { display: none; }
 	.invite .donate {
 		display: block; padding: 18px; border-radius: 12px; text-align: center;
 		background: var(--turquesa); color: var(--cinza);
@@ -484,12 +477,25 @@ function fitTotal(cents) {
 	line.style.fontSize = Math.floor(size) + "px";
 	digits.textContent = shown;
 }
+function clearCaption() {
+	const panel = document.querySelector(".invite").getBoundingClientRect();
+	const caption = document.querySelector(".caption").getBoundingClientRect();
+	const lattice = document.querySelector(".lattice");
+	if (!caption.width) return;
+	lattice.style.setProperty("--cx", caption.left - panel.left + caption.width / 2 + "px");
+	lattice.style.setProperty("--cy", caption.top - panel.top + caption.height / 2 + "px");
+	// Ellipse radii: fully clear over the text (55%), back to full texture ~45% further out.
+	lattice.style.setProperty("--rx", caption.width / 2 / 0.55 * 1.15 + "px");
+	lattice.style.setProperty("--ry", caption.height / 2 / 0.55 * 1.6 + "px");
+}
+clearCaption();
+
 // Metrics change once Neris replaces the fallback font.
-document.fonts?.ready.then(() => fitTotal(state.summary.totalCents));
+document.fonts?.ready.then(() => { fitTotal(state.summary.totalCents); clearCaption(); });
 let resizeFrame = 0;
 addEventListener("resize", () => {
 	cancelAnimationFrame(resizeFrame);
-	resizeFrame = requestAnimationFrame(() => fitTotal(state.summary.totalCents));
+	resizeFrame = requestAnimationFrame(() => { fitTotal(state.summary.totalCents); clearCaption(); });
 });
 
 function renderGoal(totalCents) {
@@ -562,7 +568,7 @@ function spark(delay) {
 				{ opacity: 0, transform: "scale(0.6)", easing: pop },
 				{ opacity: 1, transform: "scale(1)", offset: 0.1 },
 				// Short exit: a palette colour half-faded over turquoise reads muddy.
-				{ opacity: 1, transform: "scale(1)", offset: 0.82, easing: "ease-in" },
+				{ opacity: 1, transform: "scale(1)", offset: 0.82, easing: pop },
 				{ opacity: 0, transform: "scale(0.85)" },
 			];
 		hex.animate(frames, { duration: 3200, delay, fill: "backwards" }).onfinish = () => hex.remove();

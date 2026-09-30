@@ -203,6 +203,7 @@ body { overflow: hidden; }
 .stage {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(320px, 36vw);
+	grid-template-rows: minmax(0, 1fr);
 	height: 100dvh;
 }
 
@@ -260,17 +261,19 @@ body { overflow: hidden; }
 .goal-text strong { font-weight: 900; color: var(--teal); }
 
 /* ── Recent donations ─────────────────────────────── */
-.recent { margin-inline: -12px; min-height: 0; overflow: hidden; display: grid; align-content: start; gap: 12px; }
+.recent { margin-inline: -12px; min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
 .recent h2 { margin: 0; padding-left: 12px; font-size: clamp(14px, 1.8vh, 18px); font-weight: 600; color: var(--cinza-muted); }
 .recent ol {
 	list-style: none; margin: 0; padding: 0;
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+	/* Columns read top to bottom, newest first. Balanced when everything fits;
+	   on a short screen the oldest spill into a column past the edge, clipped. */
+	columns: 15rem;
 	column-gap: clamp(16px, 3vw, 48px);
 }
 .recent li {
 	display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
 	position: relative;
+	break-inside: avoid;
 	padding: clamp(8px, 1.3vh, 14px) 12px;
 	border-radius: 8px;
 	font-size: clamp(18px, 2.6vh, 30px);
@@ -350,7 +353,7 @@ body { overflow: hidden; }
 	.masthead { flex-direction: column; align-items: flex-start; gap: 12px; }
 	.masthead h1 { padding-left: 0; border-left: 0; }
 	.total { font-size: clamp(56px, 20vw, 120px); }
-	.recent ol { grid-template-columns: 1fr; }
+	.recent ol { columns: 1; }
 	.invite {
 		position: sticky; bottom: 0; padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
 		place-content: stretch; justify-items: stretch;

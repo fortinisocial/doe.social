@@ -39,16 +39,16 @@ const DEMO_PANEL = `
 	position: fixed; right: 16px; bottom: 16px; z-index: 10;
 	width: min(320px, calc(100vw - 32px));
 	background: var(--branco-puro); color: var(--cinza);
-	border: 1px solid var(--divider); border-radius: 12px;
-	box-shadow: 0 12px 32px rgb(30 115 135 / 0.18);
+	border-radius: 22px; /* 6px controls + 16px padding */
+	box-shadow: 0 0 0 1px rgb(55 54 54 / 0.08), 0 2px 4px rgb(55 54 54 / 0.06), 0 12px 32px rgb(30 115 135 / 0.16);
 	font: 300 15px/1.3 var(--font);
 }
 .demo summary {
 	display: flex; justify-content: space-between; align-items: center;
-	padding: 12px 16px; cursor: pointer; font-weight: 600; list-style: none;
+	min-height: 48px; padding: 0 16px; cursor: pointer; font-weight: 600; list-style: none;
 }
 .demo summary::-webkit-details-marker { display: none; }
-.demo summary .tag { padding: 3px 8px; border-radius: 999px; background: var(--doadores); color: #fff; font-size: 12px; }
+.demo summary kbd { padding: 2px 7px; border-radius: 6px; background: var(--track); color: var(--cinza-muted); font: 600 12px var(--font); }
 .demo .body { display: grid; gap: 14px; padding: 0 16px 16px; }
 .demo label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }
 .demo label small { font-weight: 300; color: var(--cinza-muted); }
@@ -58,20 +58,21 @@ const DEMO_PANEL = `
 .demo input[type=range] { width: 100%; accent-color: var(--teal); }
 .demo .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .demo button {
-	flex: 1; padding: 9px 10px; border: 1px solid var(--teal); border-radius: 6px;
+	flex: 1; min-height: 40px; padding: 0 10px; border: 1px solid var(--teal); border-radius: 6px;
 	background: var(--branco-puro); color: var(--teal); font: 600 14px var(--font); cursor: pointer;
+	transition: scale 0.15s var(--ease);
 }
 .demo button.primary { background: var(--teal); color: #fff; }
 .demo button:active { scale: 0.96; }
 .demo-badge {
-	position: fixed; top: 12px; left: 50%; translate: -50% 0; z-index: 10;
+	position: fixed; top: 12px; right: 12px; z-index: 10;
 	padding: 4px 12px; border-radius: 999px; background: var(--doadores); color: #fff;
 	font: 600 13px var(--font);
 }
 </style>
 <span class="demo-badge">Demonstração — valores fictícios</span>
 <details class="demo" id="demo" open>
-	<summary>Controles da demo <span class="tag">tecla D</span></summary>
+	<summary>Controles da demo <kbd>D</kbd></summary>
 	<div class="body">
 		<label>Meta em R$ <small>vazio = sem meta</small>
 			<input type="number" id="d-goal" min="0" step="100" placeholder="30000">
@@ -208,6 +209,7 @@ body { overflow: hidden; }
 	font-size: clamp(18px, 2.4vh, 28px);
 	line-height: 1.2;
 	color: var(--teal);
+	text-wrap: balance;
 }
 
 .total-block { display: grid; gap: clamp(8px, 1.5vh, 16px); }
@@ -222,7 +224,7 @@ body { overflow: hidden; }
 	white-space: nowrap;
 }
 .total .cur { font-size: 0.4em; letter-spacing: 0; margin-right: 0.12em; color: var(--teal); vertical-align: 0.9em; }
-.count { margin: 0; font-size: clamp(18px, 3vh, 36px); color: var(--cinza-muted); }
+.count { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(18px, 3vh, 36px); color: var(--cinza-muted); }
 .count strong { font-weight: 600; color: var(--cinza); }
 
 .goal { display: grid; gap: 10px; max-width: 64rem; margin-top: clamp(4px, 1vh, 12px); }
@@ -234,7 +236,7 @@ body { overflow: hidden; }
 	background: var(--turquesa);
 	transition: width 1.2s var(--ease);
 }
-.goal-text { margin: 0; font-size: clamp(16px, 2.4vh, 26px); }
+.goal-text { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(16px, 2.4vh, 26px); }
 .goal-text strong { font-weight: 900; color: var(--teal); }
 
 /* ── Recent donations ─────────────────────────────── */
@@ -248,11 +250,12 @@ body { overflow: hidden; }
 }
 .recent li {
 	display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+	position: relative;
 	padding: clamp(8px, 1.3vh, 14px) 12px;
-	border-bottom: 1px solid var(--track);
-	border-radius: 6px;
+	border-radius: 8px;
 	font-size: clamp(18px, 2.6vh, 30px);
 }
+.recent li::after { content: ""; position: absolute; inset: auto 12px 0; height: 1px; background: var(--track); }
 .recent .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .recent time { font-variant-numeric: tabular-nums; color: var(--cinza-muted); }
 .recent li.new { animation: arrive 2.4s var(--ease); }
@@ -262,7 +265,7 @@ body { overflow: hidden; }
 	40% { background: var(--turquesa-tint); }
 	100% { background: transparent; }
 }
-.empty { margin: 0; padding-left: 12px; font-size: clamp(18px, 2.6vh, 28px); color: var(--cinza-muted); }
+.empty { margin: 0; padding-left: 12px; text-wrap: pretty; font-size: clamp(18px, 2.6vh, 28px); color: var(--cinza-muted); }
 
 /* ── Right: the invitation ────────────────────────── */
 .invite {
@@ -283,11 +286,12 @@ body { overflow: hidden; }
 	width: 62%; height: auto; aspect-ratio: 1; left: 19%; top: 50%; translate: 0 -50%;
 	image-rendering: pixelated;
 }
-.invite p { margin: 0; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
+.invite p { margin: 0; text-wrap: balance; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
 .invite .link { font-weight: 300; font-size: clamp(15px, 2vh, 22px); color: var(--turquesa); word-break: break-all; }
 .invite .donate { display: none; }
 
-.stale .total, .stale .recent { opacity: 0.55; transition: opacity 0.4s; }
+.total, .recent { transition: opacity 0.4s var(--ease); }
+.stale .total, .stale .recent { opacity: 0.55; }
 
 /* Phones: someone opened the link — no QR to scan, just a button. */
 @media (max-width: 800px), (orientation: portrait) and (max-width: 1000px) {

@@ -38,10 +38,14 @@ body { padding: 40px 20px 80px; }
 header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 header img { height: 32px; width: auto; }
 header span { font-size: 14px; color: var(--cinza-muted); }
-h1 { margin: 0 0 8px; font-weight: 900; font-size: 32px; line-height: 1.1; color: var(--teal); }
+h1 { text-wrap: balance; margin: 0 0 8px; font-weight: 900; font-size: 32px; line-height: 1.1; color: var(--teal); }
 h2 { margin: 0 0 16px; font-weight: 600; font-size: 20px; }
-p { margin: 0; line-height: 1.5; }
-form { display: grid; gap: 20px; padding: 24px; background: var(--branco-puro); border: 1px solid var(--divider); border-radius: 12px; }
+p { margin: 0; line-height: 1.5; text-wrap: pretty; }
+form {
+	display: grid; gap: 20px; padding: 24px; background: var(--branco-puro);
+	border-radius: 32px; /* 8px fields + 24px padding */
+	box-shadow: 0 0 0 1px rgb(55 54 54 / 0.08), 0 2px 6px rgb(55 54 54 / 0.05);
+}
 label { display: grid; gap: 6px; font-weight: 600; font-size: 15px; }
 label small { font-weight: 300; font-size: 14px; color: var(--cinza-muted); }
 input {
@@ -69,8 +73,9 @@ li { display: flex; justify-content: space-between; align-items: center; gap: 16
 li div { display: grid; gap: 4px; min-width: 0; }
 .name { font-weight: 600; font-size: 17px; color: var(--teal); }
 .meta { font-size: 14px; color: var(--cinza-muted); overflow-wrap: anywhere; }
-.edit { font-size: 15px; color: var(--turquesa-on-light); }
-.cancel { font-size: 15px; color: var(--cinza-muted); }
+.edit, .cancel { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px; margin-inline: -8px; }
+.edit { font-size: 15px; font-weight: 600; color: var(--turquesa-on-light); }
+.cancel { justify-self: start; font-size: 15px; color: var(--cinza-muted); }
 </style>
 </head>
 <body>

@@ -29,6 +29,7 @@ function html(body: string, status = 200): Response {
 			"Cache-Control": "no-store",
 			"X-Frame-Options": "DENY",
 			"Referrer-Policy": "strict-origin-when-cross-origin",
+			"Strict-Transport-Security": "max-age=31536000",
 		},
 	});
 }
@@ -252,11 +253,15 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
+		if (url.protocol === "http:") {
+			url.protocol = "https:";
+			return Response.redirect(url.toString(), 301);
+		}
 		const [first, second, ...rest] = url.pathname.split("/").filter(Boolean);
 
 		if (!first) return Response.redirect(HOME, 301);
 		if (first === "admin" && !second) return handleAdmin(request, env);
-		if (rest.length || request.method !== "GET" || !validSlug(first.toLowerCase())) {
+		if (rest.length || (request.method !== "GET" && request.method !== "HEAD") || !validSlug(first.toLowerCase())) {
 			return Response.redirect(HOME, 302);
 		}
 		return handleLive(env, ctx, first.toLowerCase(), second);

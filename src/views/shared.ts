@@ -42,6 +42,9 @@ export const TOKENS = `
 	--divider: #CDD2D3;
 	--doadores: #E62A4A;
 	--ease: cubic-bezier(0.25, 1, 0.5, 1);
+	/* Strong curves: ease-out for things arriving, ease-in-out for things moving on screen. */
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 	--font: Neris, Nunito, "Segoe UI", sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; }

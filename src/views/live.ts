@@ -60,7 +60,7 @@ const DEMO_PANEL = `
 .demo button {
 	flex: 1; min-height: 40px; padding: 0 10px; border: 1px solid var(--teal); border-radius: 6px;
 	background: var(--branco-puro); color: var(--teal); font: 600 14px var(--font); cursor: pointer;
-	transition: scale 0.15s var(--ease);
+	transition: scale 160ms var(--ease-out);
 }
 .demo button.primary { background: var(--teal); color: #fff; }
 .demo button:active { scale: 0.96; }
@@ -137,7 +137,7 @@ const DEMO_PANEL = `
 	// Jump straight to a state without animating the difference.
 	function jump(summary) {
 		state.summary = structuredClone(summary);
-		$("total").textContent = new Intl.NumberFormat("pt-BR").format(Math.round(summary.totalCents / 100));
+		setTotal(summary.totalCents);
 		render(summary);
 	}
 
@@ -230,11 +230,13 @@ body { overflow: hidden; }
 .goal { display: grid; gap: 10px; max-width: 64rem; margin-top: clamp(4px, 1vh, 12px); }
 .track { height: clamp(14px, 2.2vh, 24px); border-radius: 999px; background: var(--track); overflow: hidden; }
 .fill {
-	width: var(--pct);
+	/* Full-width bar slid into place: transform stays on the GPU, and the track's
+	   overflow keeps both ends rounded at any percentage. */
 	height: 100%;
 	border-radius: inherit;
 	background: var(--turquesa);
-	transition: width 1.2s var(--ease);
+	transform: translateX(calc(var(--pct) - 100%));
+	transition: transform 0.9s var(--ease-in-out);
 }
 .goal-text { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(16px, 2.4vh, 26px); }
 .goal-text strong { font-weight: 900; color: var(--teal); }
@@ -258,11 +260,17 @@ body { overflow: hidden; }
 .recent li::after { content: ""; position: absolute; inset: auto 12px 0; height: 1px; background: var(--track); }
 .recent .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .recent time { font-variant-numeric: tabular-nums; color: var(--cinza-muted); }
-.recent li.new { animation: arrive 2.4s var(--ease); }
-@keyframes arrive {
-	0% { background: var(--turquesa); transform: translateY(-6px); opacity: 0; }
-	12% { opacity: 1; transform: none; }
-	40% { background: var(--turquesa-tint); }
+.recent li.new {
+	/* A quick drop-in, then a slow glow so the eye finds it across the room.
+	   Several at once cascade 60ms apart. */
+	--delay: calc(var(--i, 0) * 60ms);
+	animation:
+		arrive 320ms var(--ease-out) var(--delay) backwards,
+		glow 2.4s ease-out var(--delay) backwards;
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes glow {
+	0%, 35% { background: var(--turquesa-tint); }
 	100% { background: transparent; }
 }
 .empty { margin: 0; padding-left: 12px; text-wrap: pretty; font-size: clamp(18px, 2.6vh, 28px); color: var(--cinza-muted); }
@@ -311,14 +319,15 @@ body { overflow: hidden; }
 		display: block; padding: 18px; border-radius: 12px; text-align: center;
 		background: var(--turquesa); color: var(--cinza);
 		font: 900 20px/1 var(--font); text-decoration: none;
-		transition: scale 0.15s var(--ease);
+		transition: scale 160ms var(--ease-out);
 	}
 	.invite .donate:active { scale: 0.96; }
 }
 
 @media (prefers-reduced-motion: reduce) {
 	.fill { transition: none; }
-	.recent li.new { animation: none; }
+	/* No movement, but keep the colour cue: it is how a new donation is noticed. */
+	.recent li.new { animation: glow 2.4s ease-out backwards; }
 }
 </style>
 </head>
@@ -378,17 +387,26 @@ function when(paidAt) {
 }
 const countLabel = (n) => n === 1 ? "1 doação" : number.format(n) + " doações";
 
-function countUp(from, to) {
-	const el = $("total");
-	if (reduced || from === to) { el.textContent = number.format(Math.round(to / 100)); return; }
-	const start = performance.now(), dur = 1200;
+// The total counts up from whatever is on screen, so a donation landing
+// mid-count retargets smoothly instead of jumping back.
+let shownCents = state.summary.totalCents;
+let countFrame = 0;
+function setTotal(cents) {
+	cancelAnimationFrame(countFrame);
+	shownCents = cents;
+	$("total").textContent = number.format(Math.round(cents / 100));
+}
+function countUp(to) {
+	if (reduced || shownCents === to) return setTotal(to);
+	cancelAnimationFrame(countFrame);
+	const from = shownCents, start = performance.now(), dur = 1200;
 	const tick = (now) => {
 		const t = Math.min(1, (now - start) / dur);
-		const eased = 1 - Math.pow(1 - t, 4);
-		el.textContent = number.format(Math.round((from + (to - from) * eased) / 100));
-		if (t < 1) requestAnimationFrame(tick);
+		shownCents = from + (to - from) * (1 - Math.pow(1 - t, 4));
+		$("total").textContent = number.format(Math.round(shownCents / 100));
+		countFrame = t < 1 ? requestAnimationFrame(tick) : 0;
 	};
-	requestAnimationFrame(tick);
+	countFrame = requestAnimationFrame(tick);
 }
 
 function renderGoal(totalCents) {
@@ -401,18 +419,47 @@ function renderGoal(totalCents) {
 	document.querySelector("[role=progressbar]").setAttribute("aria-valuenow", Math.floor(pct));
 }
 
+function row(r, freshIndex) {
+	const li = document.createElement("li");
+	if (freshIndex !== undefined) {
+		li.className = "new";
+		li.style.setProperty("--i", freshIndex);
+	}
+	li.innerHTML = '<span class="amount">' + reais(r.amountCents) + '</span><time datetime="' +
+		new Date(r.paidAt * 1000).toISOString() + '">' + when(r.paidAt) + '</time>';
+	return li;
+}
+
+const sameRow = (a, b) => a.amountCents === b.amountCents && a.paidAt === b.paidAt;
+
+// Newest first, so whatever arrived since the last poll sits on top. When the
+// update is a clean prepend, existing rows keep their DOM nodes: a glow still
+// running is not cut short by the next poll.
+function renderRecent(prev, next) {
+	const ol = $("recent");
+	const newCount = Math.max(0, next.count - prev.count);
+	const kept = next.recent.slice(newCount);
+	const isPrepend = newCount > 0 && ol.children.length === prev.recent.length &&
+		kept.every((r, j) => prev.recent[j] && sameRow(r, prev.recent[j]));
+
+	if (isPrepend) {
+		ol.prepend(...next.recent.slice(0, newCount).map((r, i) => row(r, i)));
+		while (ol.children.length > next.recent.length) ol.lastElementChild.remove();
+		// Day labels roll over at midnight even when nothing new arrives.
+		next.recent.forEach((r, i) => { ol.children[i].querySelector("time").textContent = when(r.paidAt); });
+		return;
+	}
+	ol.replaceChildren(...next.recent.map((r, i) => row(r, i < newCount ? i : undefined)));
+}
+
 function render(next) {
 	const prev = state.summary;
-	if (next.totalCents !== prev.totalCents) countUp(prev.totalCents, next.totalCents);
+	if (next.totalCents !== prev.totalCents) countUp(next.totalCents);
 	$("count").textContent = countLabel(next.count);
 
 	renderGoal(next.totalCents);
 
-	// Newest first, so whatever arrived since the last poll sits on top.
-	const newCount = Math.max(0, next.count - prev.count);
-	$("recent").innerHTML = next.recent.map((r, i) =>
-		'<li' + (i < newCount ? ' class="new"' : '') + '><span class="amount">' + reais(r.amountCents) + '</span><time datetime="' + new Date(r.paidAt * 1000).toISOString() + '">' + when(r.paidAt) + '</time></li>'
-	).join("");
+	renderRecent(prev, next);
 	if (next.count > 0) $("empty")?.remove();
 
 	state.summary = next;

@@ -62,7 +62,7 @@ input[readonly] { background: #EFF4F6; color: var(--cinza-muted); }
 button {
 	justify-self: start; padding: 14px 24px; border: 0; border-radius: 8px;
 	background: var(--teal); color: #fff; font: 600 17px/1 var(--font); cursor: pointer;
-	transition: scale 0.15s var(--ease);
+	transition: scale 160ms var(--ease-out);
 }
 button:active { scale: 0.96; }
 .msg { padding: 14px 16px; border-radius: 8px; line-height: 1.4; }

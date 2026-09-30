@@ -19,15 +19,6 @@ function countLabel(count: number): string {
 	return count === 1 ? "1 doação" : `${count.toLocaleString("pt-BR")} doações`;
 }
 
-function recentItems(summary: Summary): string {
-	return summary.recent
-		.map(
-			(r) =>
-				`<li><span class="amount">${formatReais(r.amountCents)}</span><time>${r.time}</time></li>`,
-		)
-		.join("");
-}
-
 function goalBlock(page: PageConfig, totalCents: number): string {
 	// Always rendered so the demo panel can switch a goal on; hidden when unset.
 	const goal = page.goalCents ?? 0;
@@ -106,7 +97,6 @@ const DEMO_PANEL = `
 (() => {
 	const real = structuredClone(state.summary);
 	const realGoal = state.goalCents;
-	const clock = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 	let timer = null;
 
 	const amounts = () => {
@@ -121,7 +111,7 @@ const DEMO_PANEL = `
 		const s = state.summary;
 		const fresh = Array.from({ length: n }, () => ({
 			amountCents: pool[Math.floor(Math.random() * pool.length)],
-			time: clock.format(new Date()),
+			paidAt: Math.floor(Date.now() / 60000) * 60,
 		}));
 		render({
 			totalCents: s.totalCents + fresh.reduce((a, r) => a + r.amountCents, 0),
@@ -344,7 +334,7 @@ body { overflow: hidden; }
 
 		<section class="recent" aria-label="Últimas doações">
 			<h2>Últimas doações</h2>
-			<ol id="recent">${recentItems(summary)}</ol>
+			<ol id="recent"></ol>
 			${summary.count === 0 ? `<p class="empty" id="empty">A primeira doação aparece aqui assim que chegar.</p>` : ""}
 		</section>
 	</section>
@@ -369,6 +359,19 @@ const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const reais = (c) => c % 100 === 0
 	? "R$ " + number.format(c / 100)
 	: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(c / 100);
+const TZ = "America/Sao_Paulo";
+const clock = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
+const dayMonth = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, day: "2-digit", month: "2-digit" });
+const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: TZ }); // YYYY-MM-DD
+// Today: "22:05". Yesterday: "ontem, 22:05". Older: "29/09, 22:05".
+function when(paidAt) {
+	const at = new Date(paidAt * 1000);
+	const day = dayKey.format(at);
+	const now = Date.now();
+	if (day === dayKey.format(now)) return clock.format(at);
+	if (day === dayKey.format(now - 86400000)) return "ontem, " + clock.format(at);
+	return dayMonth.format(at) + ", " + clock.format(at);
+}
 const countLabel = (n) => n === 1 ? "1 doação" : number.format(n) + " doações";
 
 function countUp(from, to) {
@@ -404,7 +407,7 @@ function render(next) {
 	// Newest first, so whatever arrived since the last poll sits on top.
 	const newCount = Math.max(0, next.count - prev.count);
 	$("recent").innerHTML = next.recent.map((r, i) =>
-		'<li' + (i < newCount ? ' class="new"' : '') + '><span class="amount">' + reais(r.amountCents) + '</span><time>' + r.time + '</time></li>'
+		'<li' + (i < newCount ? ' class="new"' : '') + '><span class="amount">' + reais(r.amountCents) + '</span><time datetime="' + new Date(r.paidAt * 1000).toISOString() + '">' + when(r.paidAt) + '</time></li>'
 	).join("");
 	if (next.count > 0) $("empty")?.remove();
 
@@ -422,6 +425,9 @@ async function poll() {
 		$("stage").classList.add("stale");
 	}
 }
+
+// First paint of the list: the day labels depend on the viewer's today.
+render(state.summary);
 
 if (!${demo}) {
 	setInterval(() => { if (!document.hidden) poll(); }, POLL_MS);

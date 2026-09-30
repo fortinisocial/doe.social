@@ -16,7 +16,8 @@ export interface PageConfig {
 export interface Summary {
 	totalCents: number;
 	count: number;
-	recent: { amountCents: number; time: string }[];
+	/** `paidAt` rounded down to the minute; the browser formats it relative to its own today. */
+	recent: { amountCents: number; paidAt: number }[];
 }
 
 export const RECENT_LIMIT = 12;
@@ -37,19 +38,13 @@ export function validSlug(slug: string): boolean {
 	return /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/.test(slug) && !RESERVED.has(slug);
 }
 
-const clock = new Intl.DateTimeFormat("pt-BR", {
-	timeZone: "America/Sao_Paulo",
-	hour: "2-digit",
-	minute: "2-digit",
-});
-
 export function summarize(donations: Donation[]): Summary {
 	return {
 		totalCents: donations.reduce((sum, d) => sum + d.amountCents, 0),
 		count: donations.length,
 		recent: donations.slice(0, RECENT_LIMIT).map((d) => ({
 			amountCents: d.amountCents,
-			time: clock.format(d.paidAt * 1000),
+			paidAt: d.paidAt - (d.paidAt % 60),
 		})),
 	};
 }

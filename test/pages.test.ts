@@ -3,11 +3,11 @@ import { parseReais, summarize, validSlug } from "../src/pages";
 import { paymentLinkCode } from "../src/stripe";
 
 describe("public summary", () => {
-	test("totals every donation, lists the latest first with São Paulo time and nothing else", () => {
-		// 2026-09-30T01:05:24Z is 22:05 in São Paulo.
+	test("totals every donation and lists the latest first, to the minute, with nothing else", () => {
+		const paidAt = Date.UTC(2026, 8, 30, 1, 5, 24) / 1000;
 		const donations = Array.from({ length: 15 }, (_, i) => ({
 			amountCents: i === 0 ? 135000 : 45000,
-			paidAt: Date.UTC(2026, 8, 30, 1, 5, 24) / 1000 - i * 60,
+			paidAt: paidAt - i * 60,
 		}));
 
 		const summary = summarize(donations);
@@ -15,8 +15,8 @@ describe("public summary", () => {
 		expect(summary.totalCents).toBe(135000 + 14 * 45000);
 		expect(summary.count).toBe(15);
 		expect(summary.recent).toHaveLength(12);
-		expect(summary.recent[0]).toEqual({ amountCents: 135000, time: "22:05" });
-		expect(summary.recent[1]).toEqual({ amountCents: 45000, time: "22:04" });
+		expect(summary.recent[0]).toEqual({ amountCents: 135000, paidAt: paidAt - 24 });
+		expect(summary.recent[1]).toEqual({ amountCents: 45000, paidAt: paidAt - 24 - 60 });
 	});
 });
 

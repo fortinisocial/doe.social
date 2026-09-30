@@ -7,28 +7,16 @@ const HEX_PATH =
 	"M 74.103 7.217 A 25 25 0 0 1 99.103 7.217 L 160.705 42.783 A 25 25 0 0 1 173.205 64.434 L 173.205 135.566 A 25 25 0 0 1 160.705 157.217 L 99.103 192.783 A 25 25 0 0 1 74.103 192.783 L 12.5 157.217 A 25 25 0 0 1 0 135.566 L 0 64.434 A 25 25 0 0 1 12.5 42.783 Z";
 
 // Brand texture (DESIGN.md → decorative hexagon texture): pointy-top outline
-// hexagons tiled edge to edge. Each new donation lights one cell in a hexagon
-// palette colour (#sparks, filled by the page script). Tiling pitch: one
-// hexagon wide, ¾ tall.
+// hexagons tiled edge to edge. The cells are real elements (built by the page
+// script to fit the panel), so a donation can fill one in place. Tiling pitch:
+// one hexagon wide, ¾ tall.
 const HEX_W = 173.205;
 const HEX_ROW = 150;
 const LATTICE_SCALE = 0.34;
 const LATTICE = `<svg class="lattice" aria-hidden="true">
-	<defs>
-		<path id="hx" d="${HEX_PATH}"/>
-		<pattern id="hexes" width="${HEX_W}" height="${HEX_ROW * 2}" patternUnits="userSpaceOnUse" patternTransform="scale(${LATTICE_SCALE})">
-			<g fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="5" stroke-linejoin="round">
-				<use href="#hx"/>
-				<use href="#hx" x="${HEX_W / 2}" y="${-HEX_ROW}"/>
-				<use href="#hx" x="${-HEX_W / 2}" y="${-HEX_ROW}"/>
-				<use href="#hx" x="${HEX_W / 2}" y="${HEX_ROW}"/>
-				<use href="#hx" x="${-HEX_W / 2}" y="${HEX_ROW}"/>
-			</g>
-		</pattern>
-	</defs>
-	<rect width="100%" height="100%" fill="url(#hexes)"/>
-</svg>
-<svg class="sparks" aria-hidden="true"><g id="sparks" transform="scale(${LATTICE_SCALE})"></g></svg>`;
+	<defs><path id="hx" d="${HEX_PATH}"/></defs>
+	<g id="cells" transform="scale(${LATTICE_SCALE})"></g>
+</svg>`;
 
 interface LiveView {
 	page: PageConfig;
@@ -319,9 +307,19 @@ body { overflow: hidden; }
 	color: var(--cinza); /* 7.0:1 on turquoise — white would be 1.7:1 */
 	text-align: center;
 }
-.lattice, .sparks {
+.lattice {
 	position: absolute; inset: 0; z-index: -1;
 	width: 100%; height: 100%;
+}
+.lattice use {
+	fill: transparent;
+	stroke: #FFFFFF; stroke-opacity: 0.45; stroke-width: 5; stroke-linejoin: round;
+	/* Leaving is quick: a palette colour half-faded over turquoise reads muddy. */
+	transition: fill 450ms var(--ease-out);
+}
+.lattice use.lit {
+	fill: var(--lit);
+	transition-duration: 220ms;
 }
 .lattice {
 	/* The lattice dissolves around the caption, so no line crosses the text; the
@@ -359,7 +357,7 @@ body { overflow: hidden; }
 		background: var(--branco-puro);
 		box-shadow: 0 -1px 0 rgb(55 54 54 / 0.08), 0 -8px 24px rgb(30 115 135 / 0.08);
 	}
-	.invite .hex, .caption, .lattice, .sparks { display: none; }
+	.invite .hex, .caption, .lattice { display: none; }
 	.invite .donate {
 		display: block; padding: 18px; border-radius: 12px; text-align: center;
 		background: var(--turquesa); color: var(--cinza);
@@ -477,6 +475,9 @@ function fitTotal(cents) {
 	line.style.fontSize = Math.floor(size) + "px";
 	digits.textContent = shown;
 }
+// Where the lattice dissolves around the caption (page coordinates); a lit cell
+// there would come out half-faded.
+let clearZone = null;
 function clearCaption() {
 	const panel = document.querySelector(".invite").getBoundingClientRect();
 	const caption = document.querySelector(".caption").getBoundingClientRect();
@@ -485,8 +486,11 @@ function clearCaption() {
 	lattice.style.setProperty("--cx", caption.left - panel.left + caption.width / 2 + "px");
 	lattice.style.setProperty("--cy", caption.top - panel.top + caption.height / 2 + "px");
 	// Ellipse radii: fully clear over the text (55%), back to full texture ~45% further out.
-	lattice.style.setProperty("--rx", caption.width / 2 / 0.55 * 1.15 + "px");
-	lattice.style.setProperty("--ry", caption.height / 2 / 0.55 * 1.6 + "px");
+	const rx = caption.width / 2 / 0.55 * 1.15;
+	const ry = caption.height / 2 / 0.55 * 1.6;
+	lattice.style.setProperty("--rx", rx + "px");
+	lattice.style.setProperty("--ry", ry + "px");
+	clearZone = { cx: caption.left + caption.width / 2, cy: caption.top + caption.height / 2, rx, ry };
 }
 clearCaption();
 
@@ -495,7 +499,7 @@ document.fonts?.ready.then(() => { fitTotal(state.summary.totalCents); clearCapt
 let resizeFrame = 0;
 addEventListener("resize", () => {
 	cancelAnimationFrame(resizeFrame);
-	resizeFrame = requestAnimationFrame(() => { fitTotal(state.summary.totalCents); clearCaption(); });
+	resizeFrame = requestAnimationFrame(() => { fitTotal(state.summary.totalCents); buildLattice(); clearCaption(); });
 });
 
 function renderGoal(totalCents) {
@@ -508,71 +512,67 @@ function renderGoal(totalCents) {
 	document.querySelector("[role=progressbar]").setAttribute("aria-valuenow", Math.floor(pct));
 }
 
-// A new donation lights a random lattice cell in one of the six hexagon
-// palette colours, away from the QR and the caption, then lets it fade.
+// A new donation fills one lattice cell with a hexagon palette colour for a
+// moment — the cell itself, in place — away from the QR, the caption and the
+// demo controls.
 const PALETTE = ["#76B837", "#F9B114", "#EC6730", "#0095DB", "#6859A3", "#E62A4A"];
-const HEX = { w: ${HEX_W}, row: ${HEX_ROW}, h: 200, scale: ${LATTICE_SCALE} };
+const HEX = { w: ${HEX_W}, row: ${HEX_ROW} };
+const LIT_MS = 2400;
+
+function buildLattice() {
+	const svg = document.querySelector(".lattice");
+	if (getComputedStyle(svg).display === "none") return;
+	const { width, height } = svg.getBoundingClientRect();
+	const rows = Math.ceil(height / (HEX.row * ${LATTICE_SCALE})) + 1;
+	const cols = Math.ceil(width / (HEX.w * ${LATTICE_SCALE})) + 1;
+	const cells = [];
+	for (let r = 0; r < rows; r++) {
+		for (let c = -1; c < cols; c++) {
+			const cell = document.createElementNS("http://www.w3.org/2000/svg", "use");
+			cell.setAttribute("href", "#hx");
+			cell.setAttribute("x", c * HEX.w + (r % 2 ? HEX.w / 2 : 0));
+			cell.setAttribute("y", r * HEX.row);
+			cells.push(cell);
+		}
+	}
+	$("cells").replaceChildren(...cells);
+}
+
 // Shuffled bag: a burst never repeats a colour until all six were used.
 let bag = [];
 function nextColour() {
 	if (!bag.length) bag = [...PALETTE].sort(() => Math.random() - 0.5);
 	return bag.pop();
 }
+
 function spark(delay) {
 	const svg = document.querySelector(".lattice");
-	if (!svg || getComputedStyle(svg).display === "none") return;
+	if (getComputedStyle(svg).display === "none") return;
 	const box = svg.getBoundingClientRect();
-	const cell = HEX.w * HEX.scale;
-	const halfW = cell / 2;
-	const halfH = (HEX.h / 2) * HEX.scale;
-	// Everything a lit cell must not sit under or on top of, including the demo
-	// controls, which float over the panel.
 	const keepClear = [...document.querySelectorAll(".invite .hex, .caption, #demo, .demo-badge")]
 		.map((el) => el.getBoundingClientRect());
-	const lit = new Set([...$("sparks").children].map((u) => u.getAttribute("x") + "," + u.getAttribute("y")));
-
-	// List every free cell and pick one, instead of guessing: guessing could
-	// give up on a crowded panel and a donation went by with no highlight.
-	const free = [];
-	const rows = Math.ceil(box.height / (HEX.row * HEX.scale)) + 1;
-	const cols = Math.ceil(box.width / cell) + 1;
-	for (let rowIdx = 0; rowIdx < rows; rowIdx++) {
-		for (let colIdx = -1; colIdx < cols; colIdx++) {
-			const x = colIdx * HEX.w + (rowIdx % 2 ? HEX.w / 2 : 0);
-			const y = rowIdx * HEX.row;
-			const cx = box.left + (x + HEX.w / 2) * HEX.scale;
-			const cy = box.top + (y + HEX.h / 2) * HEX.scale;
-			const inside = cx - halfW >= box.left && cx + halfW <= box.right &&
-				cy - halfH >= box.top && cy + halfH <= box.bottom;
-			const blocked = keepClear.some((r) =>
-				cx + halfW > r.left && cx - halfW < r.right && cy + halfH > r.top && cy - halfH < r.bottom);
-			if (inside && !blocked && !lit.has(x + "," + y)) free.push({ x, y });
-		}
-	}
-	const pick = free[Math.floor(Math.random() * free.length)];
-	if (!pick) return;
-	{
-		const { x, y } = pick;
-		const hex = document.createElementNS("http://www.w3.org/2000/svg", "use");
-		hex.setAttribute("href", "#hx");
-		hex.setAttribute("x", x);
-		hex.setAttribute("y", y);
-		hex.setAttribute("fill", nextColour());
-		hex.style.transformBox = "fill-box";
-		hex.style.transformOrigin = "center";
-		$("sparks").append(hex);
-		const pop = "cubic-bezier(0.23, 1, 0.32, 1)";
-		const frames = reduced
-			? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.82 }, { opacity: 0 }]
-			: [
-				{ opacity: 0, transform: "scale(0.6)", easing: pop },
-				{ opacity: 1, transform: "scale(1)", offset: 0.1 },
-				// Short exit: a palette colour half-faded over turquoise reads muddy.
-				{ opacity: 1, transform: "scale(1)", offset: 0.82, easing: pop },
-				{ opacity: 0, transform: "scale(0.85)" },
-			];
-		hex.animate(frames, { duration: 3200, delay, fill: "backwards" }).onfinish = () => hex.remove();
-	}
+	// List every free cell and pick one, instead of guessing: guessing could give
+	// up on a crowded panel and a donation went by with no highlight.
+	const free = [...$("cells").children].filter((cell) => {
+		if (cell.classList.contains("lit") || cell.dataset.pending) return false;
+		const r = cell.getBoundingClientRect();
+		// Cells cut by the panel edge are fine as long as most of the cell shows.
+		const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+		const inside = cx > box.left && cx < box.right && cy > box.top && cy < box.bottom;
+		// Any corner of the cell inside the fade ellipse rules it out.
+		const faded = clearZone && [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]]
+			.some(([x, y]) => ((x - clearZone.cx) / clearZone.rx) ** 2 + ((y - clearZone.cy) / clearZone.ry) ** 2 < 1);
+		return inside && !faded && !keepClear.some((k) => r.right > k.left && r.left < k.right && r.bottom > k.top && r.top < k.bottom);
+	});
+	const cell = free[Math.floor(Math.random() * free.length)];
+	if (!cell) return;
+	cell.dataset.pending = "1";
+	setTimeout(() => {
+		delete cell.dataset.pending;
+		cell.style.setProperty("--lit", nextColour());
+		cell.classList.add("lit");
+		setTimeout(() => cell.classList.remove("lit"), LIT_MS);
+	}, delay);
 }
 
 function row(r, freshIndex) {
@@ -634,6 +634,8 @@ async function poll() {
 		$("stage").classList.add("stale");
 	}
 }
+
+buildLattice();
 
 // First paint of the list: the day labels depend on the viewer's today.
 render(state.summary);

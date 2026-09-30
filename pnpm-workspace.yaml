@@ -1,0 +1,9 @@
+# pnpm 11 exige um veredito explícito por pacote que traz build script.
+allowBuilds:
+  esbuild: true
+  workerd: true
+
+# Sete dias de quarentena: uma versão recém-publicada ainda não foi
+# exercitada por ninguém, e supply chain attack se descobre nos primeiros dias.
+# Em minutos, que é a unidade do pnpm.
+minimumReleaseAge: 10080

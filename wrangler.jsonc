@@ -1,0 +1,27 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "doe-social",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-09-01",
+	"observability": { "enabled": true },
+	// Everything under doe.social. Static files in public/ (favicons, fonts, the
+	// old /redesoma page) are served first; any other path reaches the Worker.
+	"routes": [{ "pattern": "doe.social/*", "zone_name": "doe.social" }],
+	"assets": { "directory": "public", "binding": "ASSETS" },
+	// One key per live page: slug -> PageConfig (see src/pages.ts).
+	"kv_namespaces": [{ "binding": "PAGES", "id": "aec227cee2764281b239af7fc71f2a23" }],
+	"secrets": {
+		"required": ["STRIPE_API_KEY", "DUB_API_KEY"]
+	},
+	"vars": {
+		// Cloudflare Access app protecting /admin. The Worker re-checks the
+		// Access JWT itself, so /admin stays closed if Access is misconfigured.
+		"ACCESS_TEAM_DOMAIN": "",
+		"ACCESS_AUD": "",
+		"DUB_DOMAIN": "dub.sh"
+	}
+	// Secrets (wrangler secret put <NAME>):
+	//   STRIPE_API_KEY  rk_live_... restricted, read-only: Checkout Sessions,
+	//                   Payment Intents, Payment Links
+	//   DUB_API_KEY     dub_... workspace key, links read + write
+}

@@ -253,10 +253,6 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.protocol === "http:") {
-			url.protocol = "https:";
-			return Response.redirect(url.toString(), 301);
-		}
 		const [first, second, ...rest] = url.pathname.split("/").filter(Boolean);
 
 		if (!first) return Response.redirect(HOME, 301);

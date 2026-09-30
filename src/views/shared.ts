@@ -40,7 +40,9 @@ export const TOKENS = `
 	--cinza-muted: #656A6B;
 	--track: #E2E7E9;
 	--divider: #CDD2D3;
+	--turquesa-deep: #003B3C; /* text on turquoise: 7.25:1 */
 	--doadores: #E62A4A;
+	--doadores-strong: #E32648; /* white text on red: 4.5:1 */
 	--ease: cubic-bezier(0.25, 1, 0.5, 1);
 	/* Strong curves: ease-out for things arriving, ease-in-out for things moving on screen. */
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);

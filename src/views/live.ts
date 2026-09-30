@@ -6,6 +6,37 @@ const HEX_VIEWBOX = "-1 2.868 175.205 194.264";
 const HEX_PATH =
 	"M 74.103 7.217 A 25 25 0 0 1 99.103 7.217 L 160.705 42.783 A 25 25 0 0 1 173.205 64.434 L 173.205 135.566 A 25 25 0 0 1 160.705 157.217 L 99.103 192.783 A 25 25 0 0 1 74.103 192.783 L 12.5 157.217 A 25 25 0 0 1 0 135.566 L 0 64.434 A 25 25 0 0 1 12.5 42.783 Z";
 
+// Brand texture (DESIGN.md → decorative hexagon texture): pointy-top outline
+// hexagons tiled edge to edge, plus two filled slivers in Doadores red — the
+// methodology vertex for donors. Tiling pitch: one hexagon wide, ¾ tall.
+const HEX_W = 173.205;
+const HEX_ROW = 150;
+const LATTICE_SCALE = 0.34;
+const sliver = (col: number, row: number) =>
+	`<use href="#hx" x="${col * HEX_W + (row % 2 ? HEX_W / 2 : 0)}" y="${row * HEX_ROW}" fill="#E62A4A"/>`;
+const LATTICE = `<svg class="lattice" aria-hidden="true">
+	<defs>
+		<path id="hx" d="${HEX_PATH}"/>
+		<pattern id="hexes" width="${HEX_W}" height="${HEX_ROW * 2}" patternUnits="userSpaceOnUse" patternTransform="scale(${LATTICE_SCALE})">
+			<g fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="5" stroke-linejoin="round">
+				<use href="#hx"/>
+				<use href="#hx" x="${HEX_W / 2}" y="${-HEX_ROW}"/>
+				<use href="#hx" x="${-HEX_W / 2}" y="${-HEX_ROW}"/>
+				<use href="#hx" x="${HEX_W / 2}" y="${HEX_ROW}"/>
+				<use href="#hx" x="${-HEX_W / 2}" y="${HEX_ROW}"/>
+			</g>
+		</pattern>
+		<!-- Lattice fades out toward the QR so it never competes with it; the slivers stay solid. -->
+		<radialGradient id="fade" cx="0.5" cy="0.42" r="0.6">
+			<stop offset="0.35" stop-color="#000"/>
+			<stop offset="0.9" stop-color="#FFF"/>
+		</radialGradient>
+		<mask id="edges"><rect width="100%" height="100%" fill="url(#fade)"/></mask>
+	</defs>
+	<rect width="100%" height="100%" fill="url(#hexes)" mask="url(#edges)"/>
+	<g transform="scale(${LATTICE_SCALE})">${sliver(0, 1)}${sliver(1, 18)}</g>
+</svg>`;
+
 interface LiveView {
 	page: PageConfig;
 	summary: Summary;
@@ -64,9 +95,12 @@ const DEMO_PANEL = `
 }
 .demo button.primary { background: var(--teal); color: #fff; }
 .demo button:active { scale: 0.96; }
+@media (max-width: 800px), (orientation: portrait) and (max-width: 1000px) {
+	.demo { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
 .demo-badge {
 	position: fixed; top: 12px; right: 12px; z-index: 10;
-	padding: 4px 12px; border-radius: 999px; background: var(--doadores); color: #fff;
+	padding: 4px 12px; border-radius: 999px; background: var(--doadores-strong); color: #fff;
 	font: 600 13px var(--font);
 }
 </style>
@@ -177,7 +211,7 @@ export function renderLive({ page, summary, donateUrl, qrUrl, demo = false }: Li
 ${HEAD_COMMON}
 <title>${demo ? "Demo · " : ""}${title} · Fortini</title>
 ${demo ? '<meta name="robots" content="noindex">' : ""}
-<meta name="theme-color" content="#1E7387">
+<meta name="theme-color" content="#24DBDD">
 <style>
 ${FONT_FACES}
 ${TOKENS}
@@ -282,9 +316,16 @@ body { overflow: hidden; }
 	justify-items: center;
 	gap: clamp(16px, 3vh, 32px);
 	padding: clamp(24px, 4vh, 56px);
-	background: var(--teal);
-	color: var(--branco);
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	background: var(--turquesa);
+	color: var(--cinza); /* 7.0:1 on turquoise — white would be 1.7:1 */
 	text-align: center;
+}
+.lattice {
+	position: absolute; inset: 0; z-index: -1;
+	width: 100%; height: 100%;
 }
 .hex { position: relative; width: min(28vw, 58vh); aspect-ratio: 175.205 / 194.264; }
 .hex svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -295,7 +336,7 @@ body { overflow: hidden; }
 	image-rendering: pixelated;
 }
 .invite p { margin: 0; text-wrap: balance; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
-.invite .link { font-weight: 300; font-size: clamp(15px, 2vh, 22px); color: var(--turquesa); word-break: break-all; }
+.invite .link { font-weight: 600; font-size: clamp(15px, 2vh, 22px); color: var(--turquesa-deep); word-break: break-all; }
 .invite .donate { display: none; }
 
 .total, .recent { transition: opacity 0.4s var(--ease); }
@@ -313,8 +354,10 @@ body { overflow: hidden; }
 	.invite {
 		position: sticky; bottom: 0; padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
 		place-content: stretch; justify-items: stretch;
+		background: var(--branco-puro);
+		box-shadow: 0 -1px 0 rgb(55 54 54 / 0.08), 0 -8px 24px rgb(30 115 135 / 0.08);
 	}
-	.invite .hex, .invite p, .invite .link { display: none; }
+	.invite .hex, .invite p, .invite .link, .lattice { display: none; }
 	.invite .donate {
 		display: block; padding: 18px; border-radius: 12px; text-align: center;
 		background: var(--turquesa); color: var(--cinza);
@@ -353,6 +396,7 @@ body { overflow: hidden; }
 	</section>
 
 	<aside class="invite">
+		${LATTICE}
 		<div class="hex">
 			<svg viewBox="${HEX_VIEWBOX}" aria-hidden="true"><path d="${HEX_PATH}" fill="#FBFBFB"/></svg>
 			<img src="${escapeHtml(qrUrl)}" alt="QR code para doar" width="800" height="800">

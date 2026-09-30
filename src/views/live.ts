@@ -545,27 +545,60 @@ function nextColour() {
 	return bag.pop();
 }
 
+// Pointy-top hexagon test: inside when within the flat sides and under the
+// sloped edges. Used for the QR's white hexagon, whose bounding box would
+// otherwise block the lattice corners around it.
+function inHexagon(x, y, r, margin) {
+	const w = r.width / 2 + margin, h = r.height / 2 + margin;
+	const dx = Math.abs(x - (r.left + r.width / 2)), dy = Math.abs(y - (r.top + r.height / 2));
+	return dx <= w && dy <= h - (h / 2) * (dx / w);
+}
+// The six vertices of a lattice cell, from its bounding box.
+function vertices(r) {
+	const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+	return [[cx, r.top], [cx, r.bottom], [r.left, cy - r.height / 4], [r.right, cy - r.height / 4],
+		[r.left, cy + r.height / 4], [r.right, cy + r.height / 4]];
+}
+const recentSparks = [];
+
 function spark(delay) {
 	const svg = document.querySelector(".lattice");
 	if (getComputedStyle(svg).display === "none") return;
 	const box = svg.getBoundingClientRect();
-	const keepClear = [...document.querySelectorAll(".invite .hex, .caption, #demo, .demo-badge")]
-		.map((el) => el.getBoundingClientRect());
-	// List every free cell and pick one, instead of guessing: guessing could give
-	// up on a crowded panel and a donation went by with no highlight.
-	const free = [...$("cells").children].filter((cell) => {
-		if (cell.classList.contains("lit") || cell.dataset.pending) return false;
+	const qr = document.querySelector(".invite .hex").getBoundingClientRect();
+	const keepClear = [...document.querySelectorAll("#demo, .demo-badge")].map((el) => el.getBoundingClientRect());
+	// List every free cell, instead of guessing: guessing could give up on a
+	// crowded panel and a donation went by with no highlight.
+	const free = [...$("cells").children].flatMap((cell) => {
+		if (cell.classList.contains("lit") || cell.dataset.pending) return [];
 		const r = cell.getBoundingClientRect();
-		// Cells cut by the panel edge are fine as long as most of the cell shows.
 		const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-		const inside = cx > box.left && cx < box.right && cy > box.top && cy < box.bottom;
-		// Any corner of the cell inside the fade ellipse rules it out.
-		const faded = clearZone && [[r.left, r.top], [r.right, r.top], [r.left, r.bottom], [r.right, r.bottom]]
-			.some(([x, y]) => ((x - clearZone.cx) / clearZone.rx) ** 2 + ((y - clearZone.cy) / clearZone.ry) ** 2 < 1);
-		return inside && !faded && !keepClear.some((k) => r.right > k.left && r.left < k.right && r.bottom > k.top && r.top < k.bottom);
+		// Cells cut by the panel edge are fine as long as most of the cell shows.
+		if (cx <= box.left || cx >= box.right || cy <= box.top || cy >= box.bottom) return [];
+		const points = vertices(r);
+		if (points.some(([x, y]) => inHexagon(x, y, qr, 6))) return [];
+		// Where the lattice dissolves around the caption a lit cell would come out half-faded.
+		if (clearZone && points.some(([x, y]) =>
+			((x - clearZone.cx) / clearZone.rx) ** 2 + ((y - clearZone.cy) / clearZone.ry) ** 2 < 1)) return [];
+		if (keepClear.some((k) => r.right > k.left && r.left < k.right && r.bottom > k.top && r.top < k.bottom)) return [];
+		return [{ cell, x: cx - box.left, y: cy - box.top }];
 	});
-	const cell = free[Math.floor(Math.random() * free.length)];
-	if (!cell) return;
+	if (!free.length) return;
+
+	// Best of a few random candidates: the one farthest from recent highlights,
+	// so they spread over the whole panel instead of clumping.
+	let pick = null, best = -1;
+	for (let i = 0; i < 10; i++) {
+		const c = free[Math.floor(Math.random() * free.length)];
+		const gap = recentSparks.length
+			? Math.min(...recentSparks.map((p) => Math.hypot(p.x - c.x, p.y - c.y)))
+			: Math.random();
+		if (gap > best) { best = gap; pick = c; }
+	}
+	recentSparks.push({ x: pick.x, y: pick.y });
+	if (recentSparks.length > 8) recentSparks.shift();
+
+	const cell = pick.cell;
 	cell.dataset.pending = "1";
 	setTimeout(() => {
 		delete cell.dataset.pending;

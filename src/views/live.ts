@@ -7,13 +7,12 @@ const HEX_PATH =
 	"M 74.103 7.217 A 25 25 0 0 1 99.103 7.217 L 160.705 42.783 A 25 25 0 0 1 173.205 64.434 L 173.205 135.566 A 25 25 0 0 1 160.705 157.217 L 99.103 192.783 A 25 25 0 0 1 74.103 192.783 L 12.5 157.217 A 25 25 0 0 1 0 135.566 L 0 64.434 A 25 25 0 0 1 12.5 42.783 Z";
 
 // Brand texture (DESIGN.md → decorative hexagon texture): pointy-top outline
-// hexagons tiled edge to edge, plus two filled slivers in Doadores red — the
-// methodology vertex for donors. Tiling pitch: one hexagon wide, ¾ tall.
+// hexagons tiled edge to edge. Each new donation lights one cell in a hexagon
+// palette colour (#sparks, filled by the page script). Tiling pitch: one
+// hexagon wide, ¾ tall.
 const HEX_W = 173.205;
 const HEX_ROW = 150;
 const LATTICE_SCALE = 0.34;
-const sliver = (col: number, row: number) =>
-	`<use href="#hx" x="${col * HEX_W + (row % 2 ? HEX_W / 2 : 0)}" y="${row * HEX_ROW}" fill="#E62A4A"/>`;
 const LATTICE = `<svg class="lattice" aria-hidden="true">
 	<defs>
 		<path id="hx" d="${HEX_PATH}"/>
@@ -26,7 +25,7 @@ const LATTICE = `<svg class="lattice" aria-hidden="true">
 				<use href="#hx" x="${-HEX_W / 2}" y="${HEX_ROW}"/>
 			</g>
 		</pattern>
-		<!-- Lattice fades out toward the QR so it never competes with it; the slivers stay solid. -->
+		<!-- Lattice fades out toward the QR so it never competes with it; sparks stay solid. -->
 		<radialGradient id="fade" cx="0.5" cy="0.42" r="0.6">
 			<stop offset="0.35" stop-color="#000"/>
 			<stop offset="0.9" stop-color="#FFF"/>
@@ -34,7 +33,7 @@ const LATTICE = `<svg class="lattice" aria-hidden="true">
 		<mask id="edges"><rect width="100%" height="100%" fill="url(#fade)"/></mask>
 	</defs>
 	<rect width="100%" height="100%" fill="url(#hexes)" mask="url(#edges)"/>
-	<g transform="scale(${LATTICE_SCALE})">${sliver(0, 1)}${sliver(1, 18)}</g>
+	<g id="sparks" transform="scale(${LATTICE_SCALE})"></g>
 </svg>`;
 
 interface LiveView {
@@ -335,6 +334,13 @@ body { overflow: hidden; }
 	width: 62%; height: auto; aspect-ratio: 1; left: 19%; top: 50%; translate: 0 -50%;
 	image-rendering: pixelated;
 }
+.caption {
+	/* Solid plate: no lattice line may cross the text. */
+	display: grid; gap: clamp(8px, 1.5vh, 16px);
+	padding: clamp(12px, 2vh, 20px) clamp(16px, 2vw, 28px);
+	border-radius: 20px;
+	background: var(--turquesa);
+}
 .invite p { margin: 0; text-wrap: balance; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
 .invite .link { font-weight: 600; font-size: clamp(15px, 2vh, 22px); color: var(--turquesa-deep); word-break: break-all; }
 .invite .donate { display: none; }
@@ -357,7 +363,7 @@ body { overflow: hidden; }
 		background: var(--branco-puro);
 		box-shadow: 0 -1px 0 rgb(55 54 54 / 0.08), 0 -8px 24px rgb(30 115 135 / 0.08);
 	}
-	.invite .hex, .invite p, .invite .link, .lattice { display: none; }
+	.invite .hex, .caption, .lattice { display: none; }
 	.invite .donate {
 		display: block; padding: 18px; border-radius: 12px; text-align: center;
 		background: var(--turquesa); color: var(--cinza);
@@ -401,8 +407,10 @@ body { overflow: hidden; }
 			<svg viewBox="${HEX_VIEWBOX}" aria-hidden="true"><path d="${HEX_PATH}" fill="#FBFBFB"/></svg>
 			<img src="${escapeHtml(qrUrl)}" alt="QR code para doar" width="800" height="800">
 		</div>
-		<p>Aponte a câmera e doe</p>
-		<span class="link">${shortLabel}</span>
+		<div class="caption">
+			<p>Aponte a câmera e doe</p>
+			<span class="link">${shortLabel}</span>
+		</div>
 		<a class="donate" href="${escapeHtml(donateUrl)}">Doar agora</a>
 	</aside>
 </main>
@@ -463,6 +471,59 @@ function renderGoal(totalCents) {
 	document.querySelector("[role=progressbar]").setAttribute("aria-valuenow", Math.floor(pct));
 }
 
+// A new donation lights a random lattice cell in one of the six hexagon
+// palette colours, away from the QR and the caption, then lets it fade.
+const PALETTE = ["#76B837", "#F9B114", "#EC6730", "#0095DB", "#6859A3", "#E62A4A"];
+const HEX = { w: ${HEX_W}, row: ${HEX_ROW}, h: 200, scale: ${LATTICE_SCALE} };
+// Shuffled bag: a burst never repeats a colour until all six were used.
+let bag = [];
+function nextColour() {
+	if (!bag.length) bag = [...PALETTE].sort(() => Math.random() - 0.5);
+	return bag.pop();
+}
+function spark(delay) {
+	const svg = document.querySelector(".lattice");
+	if (!svg || getComputedStyle(svg).display === "none") return;
+	const box = svg.getBoundingClientRect();
+	const cell = HEX.w * HEX.scale;
+	const keepClear = [...document.querySelectorAll(".invite .hex, .caption")]
+		.map((el) => el.getBoundingClientRect());
+	for (let tries = 0; tries < 40; tries++) {
+		const rowIdx = Math.floor(Math.random() * (box.height / (HEX.row * HEX.scale) + 1));
+		const colIdx = Math.floor(Math.random() * (box.width / cell + 1));
+		const x = colIdx * HEX.w + (rowIdx % 2 ? HEX.w / 2 : 0);
+		const y = rowIdx * HEX.row;
+		const cx = box.left + (x + HEX.w / 2) * HEX.scale;
+		const cy = box.top + (y + HEX.h / 2) * HEX.scale;
+		const halfH = (HEX.h / 2) * HEX.scale;
+		const inside = cx > box.left + cell / 2 && cx < box.right - cell / 2 &&
+			cy > box.top + halfH && cy < box.bottom - halfH;
+		const blocked = keepClear.some((r) =>
+			cx > r.left - cell / 2 && cx < r.right + cell / 2 && cy > r.top - cell / 2 && cy < r.bottom + cell / 2);
+		if (!inside || blocked) continue;
+
+		const hex = document.createElementNS("http://www.w3.org/2000/svg", "use");
+		hex.setAttribute("href", "#hx");
+		hex.setAttribute("x", x);
+		hex.setAttribute("y", y);
+		hex.setAttribute("fill", nextColour());
+		hex.style.transformBox = "fill-box";
+		hex.style.transformOrigin = "center";
+		$("sparks").append(hex);
+		const pop = "cubic-bezier(0.23, 1, 0.32, 1)";
+		const frames = reduced
+			? [{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }]
+			: [
+				{ opacity: 0, transform: "scale(0.6)", easing: pop },
+				{ opacity: 1, transform: "scale(1)", offset: 0.12 },
+				{ opacity: 1, transform: "scale(1)", offset: 0.55, easing: "ease-in-out" },
+				{ opacity: 0, transform: "scale(1)" },
+			];
+		hex.animate(frames, { duration: 3200, delay, fill: "backwards" }).onfinish = () => hex.remove();
+		return;
+	}
+}
+
 function row(r, freshIndex) {
 	const li = document.createElement("li");
 	if (freshIndex !== undefined) {
@@ -482,6 +543,7 @@ const sameRow = (a, b) => a.amountCents === b.amountCents && a.paidAt === b.paid
 function renderRecent(prev, next) {
 	const ol = $("recent");
 	const newCount = Math.max(0, next.count - prev.count);
+	for (let i = 0; i < Math.min(newCount, 6); i++) spark(i * 120);
 	const kept = next.recent.slice(newCount);
 	const isPrepend = newCount > 0 && ol.children.length === prev.recent.length &&
 		kept.every((r, j) => prev.recent[j] && sameRow(r, prev.recent[j]));

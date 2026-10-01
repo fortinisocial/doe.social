@@ -364,7 +364,7 @@ body { overflow: hidden; }
 	/* Columns read top to bottom, newest first. Balanced when everything fits;
 	   on a short screen the oldest spill into a column past the edge, clipped.
 	   Width in em so a column grows with the text: "R$ 1.350  ontem, 22:06". */
-	columns: 12em;
+	columns: 12em 3; /* at most 3: a wide screen gets taller columns, not a 4×3 strip */
 	column-gap: clamp(16px, 3vw, 48px);
 	font-size: clamp(18px, 2.6vh, 30px);
 }

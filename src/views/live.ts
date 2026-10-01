@@ -62,6 +62,8 @@ const DEMO_PANEL = `
 .demo summary::-webkit-details-marker { display: none; }
 .demo summary .title { display: flex; align-items: center; gap: 8px; }
 .demo .gear { width: 18px; height: 18px; flex: none; color: var(--teal); }
+/* Neris sits low in its line box; trimming to cap height centers the gear on the letters. */
+.demo summary .label { text-box: trim-both cap alphabetic; }
 .demo summary kbd { padding: 2px 7px; border-radius: 6px; background: var(--track); color: var(--cinza-muted); font: 600 12px var(--font); }
 .demo .body { display: grid; gap: 14px; padding: 0 16px 16px; }
 .demo label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }

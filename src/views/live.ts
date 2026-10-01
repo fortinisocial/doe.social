@@ -60,6 +60,8 @@ const DEMO_PANEL = `
 	min-height: 48px; padding: 0 16px; cursor: pointer; font-weight: 600; list-style: none;
 }
 .demo summary::-webkit-details-marker { display: none; }
+.demo summary .title { display: flex; align-items: center; gap: 8px; }
+.demo .gear { width: 18px; height: 18px; flex: none; color: var(--teal); }
 .demo summary kbd { padding: 2px 7px; border-radius: 6px; background: var(--track); color: var(--cinza-muted); font: 600 12px var(--font); }
 .demo .body { display: grid; gap: 14px; padding: 0 16px 16px; }
 .demo label { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }
@@ -76,8 +78,26 @@ const DEMO_PANEL = `
 }
 .demo button.primary { background: var(--teal); color: #fff; }
 .demo button:active { scale: 0.96; }
+/* Phones: closed, the panel is a gear you can drag out of the way. */
 @media (max-width: 800px), (orientation: portrait) and (max-width: 1000px) {
 	.demo { bottom: calc(96px + env(safe-area-inset-bottom)); }
+	.demo summary kbd { display: none; }
+	.demo:not([open]) {
+		width: 56px; height: 56px; border-radius: 50%;
+		translate: var(--dx, 0px) var(--dy, 0px);
+		touch-action: none;
+		transition: scale 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+	}
+	.demo:not([open]) summary { height: 100%; min-height: 0; padding: 0; justify-content: center; cursor: grab; }
+	.demo:not([open]) .gear { width: 26px; height: 26px; }
+	.demo:not([open]) .label {
+		position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+	}
+	.demo.dragging {
+		scale: 1.08;
+		box-shadow: 0 0 0 1px rgb(55 54 54 / 0.08), 0 16px 40px rgb(30 115 135 / 0.28);
+	}
+	.demo.dragging summary { cursor: grabbing; }
 }
 .demo-badge {
 	position: fixed; top: 12px; right: 12px; z-index: 10;
@@ -87,7 +107,7 @@ const DEMO_PANEL = `
 </style>
 <span class="demo-badge">Demonstração — valores fictícios</span>
 <details class="demo" id="demo" open>
-	<summary>Controles da demo <kbd>D</kbd></summary>
+	<summary><span class="title"><svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span class="label">Ajustes</span></span><kbd>D</kbd></summary>
 	<div class="body">
 		<label>Meta em R$ <small>vazio = sem meta</small>
 			<input type="number" id="d-goal" min="0" step="100" placeholder="30000">
@@ -168,8 +188,43 @@ const DEMO_PANEL = `
 	});
 	$("d-zero").addEventListener("click", () => jump({ totalCents: 0, count: 0, recent: [] }));
 	$("d-real").addEventListener("click", () => { setGoal(realGoal); jump(real); });
+	// Phones start with the panel folded into the gear, which drags anywhere on
+	// screen; a drag shorter than a few pixels still counts as a tap.
+	const demo = $("demo");
+	const summary = demo.querySelector("summary");
+	const phone = matchMedia("(max-width: 800px), (orientation: portrait) and (max-width: 1000px)");
+	if (phone.matches) demo.open = false;
+	let drag = null, moved = false, dx = 0, dy = 0;
+	summary.addEventListener("pointerdown", (e) => {
+		if (demo.open || !phone.matches) return;
+		const r = demo.getBoundingClientRect();
+		drag = { x: e.clientX, y: e.clientY, left: r.left, top: r.top, size: r.width, dx, dy };
+		moved = false;
+		summary.setPointerCapture(e.pointerId);
+	});
+	summary.addEventListener("pointermove", (e) => {
+		if (!drag) return;
+		const mx = e.clientX - drag.x, my = e.clientY - drag.y;
+		if (!moved && Math.hypot(mx, my) < 6) return;
+		moved = true;
+		demo.classList.add("dragging");
+		const left = Math.min(Math.max(8, drag.left + mx), innerWidth - drag.size - 8);
+		const top = Math.min(Math.max(8, drag.top + my), innerHeight - drag.size - 8);
+		dx = drag.dx + left - drag.left;
+		dy = drag.dy + top - drag.top;
+		demo.style.setProperty("--dx", dx + "px");
+		demo.style.setProperty("--dy", dy + "px");
+	});
+	const endDrag = () => { drag = null; demo.classList.remove("dragging"); };
+	summary.addEventListener("pointerup", endDrag);
+	summary.addEventListener("pointercancel", endDrag);
+	summary.addEventListener("click", (e) => {
+		if (moved) e.preventDefault();
+		moved = false;
+	});
+
 	document.addEventListener("keydown", (e) => {
-		if (e.key.toLowerCase() === "d" && !e.target.closest("input")) $("demo").open = !$("demo").open;
+		if (e.key.toLowerCase() === "d" && !e.target.closest("input")) demo.open = !demo.open;
 	});
 
 	setGoal(realGoal);

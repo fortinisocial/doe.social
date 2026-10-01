@@ -266,9 +266,11 @@ body { overflow: hidden; }
 .recent ol {
 	list-style: none; margin: 0; padding: 0;
 	/* Columns read top to bottom, newest first. Balanced when everything fits;
-	   on a short screen the oldest spill into a column past the edge, clipped. */
-	columns: 15rem;
+	   on a short screen the oldest spill into a column past the edge, clipped.
+	   Width in em so a column grows with the text: "R$ 1.350  ontem, 22:06". */
+	columns: 12em;
 	column-gap: clamp(16px, 3vw, 48px);
+	font-size: clamp(18px, 2.6vh, 30px);
 }
 .recent li {
 	display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
@@ -276,7 +278,7 @@ body { overflow: hidden; }
 	break-inside: avoid;
 	padding: clamp(8px, 1.3vh, 14px) 12px;
 	border-radius: 8px;
-	font-size: clamp(18px, 2.6vh, 30px);
+	white-space: nowrap;
 }
 .recent li::after { content: ""; position: absolute; inset: auto 12px 0; height: 1px; background: var(--track); }
 .recent .amount { font-weight: 600; font-variant-numeric: tabular-nums; }

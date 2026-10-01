@@ -216,7 +216,7 @@ body { overflow: hidden; }
 	min-width: 0;
 }
 .masthead { display: flex; align-items: center; gap: 20px; }
-.masthead img { height: clamp(28px, 4vh, 44px); width: auto; }
+.masthead img { height: clamp(36px, 6.5vh, 88px); width: auto; }
 .masthead h1 {
 	margin: 0;
 	padding-left: 20px;

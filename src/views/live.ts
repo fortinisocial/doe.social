@@ -247,15 +247,15 @@ body { overflow: hidden; }
 .count strong { font-weight: 600; color: var(--cinza); }
 
 .goal { display: grid; gap: 10px; max-width: 64rem; margin-top: clamp(4px, 1vh, 12px); }
-/* Teal on a mid-gray track (3.6:1): still reads on a washed-out projector,
-   where turquoise on light gray (1.4:1) all but disappears. */
-.track { height: clamp(14px, 2.2vh, 24px); border-radius: 999px; background: var(--divider); overflow: hidden; }
+/* Brand blue on light gray (2.7:1): saturated enough to hold on a washed-out
+   projector, where turquoise on light gray (1.4:1) all but disappears. */
+.track { height: clamp(14px, 2.2vh, 24px); border-radius: 999px; background: var(--track); overflow: hidden; }
 .fill {
 	/* Full-width bar slid into place: transform stays on the GPU, and the track's
 	   overflow keeps both ends rounded at any percentage. */
 	height: 100%;
 	border-radius: inherit;
-	background: var(--teal);
+	background: #0095DB;
 	transform: translateX(calc(var(--pct) - 100%));
 	transition: transform 0.9s var(--ease-in-out);
 }

@@ -34,13 +34,16 @@ function countLabel(count: number): string {
 function goalBlock(page: PageConfig, totalCents: number): string {
 	// Always rendered so the demo panel can switch a goal on; hidden when unset.
 	const goal = page.goalCents ?? 0;
-	const pct = goal ? Math.min(100, (totalCents / goal) * 100) : 0;
+	// The text tells the real percentage past the goal; only the bar stops at 100%.
+	const pct = goal ? Math.floor((totalCents / goal) * 100) : 0;
+	const reached = goal > 0 && totalCents >= goal;
+	const remaining = reached ? "Meta batida!" : `faltam <strong>${formatReais(goal - totalCents)}</strong>`;
 	return `
-<div class="goal" id="goal"${goal ? "" : " hidden"}>
-	<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.floor(pct)}" aria-label="Progresso da meta">
-		<div class="fill" id="fill" style="--pct:${pct}%"></div>
+<div class="goal${reached ? " reached" : ""}" id="goal"${goal ? "" : " hidden"}>
+	<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, pct)}" aria-valuetext="${pct}% da meta" aria-label="Progresso da meta">
+		<div class="fill" id="fill" style="--pct:${Math.min(100, pct)}%"></div>
 	</div>
-	<p class="goal-text"><strong id="pct">${Math.floor(pct)}%</strong> da meta de <span id="goal-amount">${formatReais(goal)}</span></p>
+	<p class="goal-text"><span><strong id="pct">${pct}%</strong> da meta de <span id="goal-amount">${formatReais(goal)}</span></span><span class="remaining" id="remaining">${goal ? remaining : ""}</span></p>
 </div>`;
 }
 
@@ -301,7 +304,25 @@ body { overflow: hidden; }
 .total .cur { font-size: 0.4em; letter-spacing: 0; margin-right: 0.12em; color: var(--teal); vertical-align: 0.9em; }
 /* The count reads as part of the figure — "R$ 17.550  32 doações" — sharing
    its baseline, and drops below only when the number needs the whole row. */
-.figure { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: clamp(16px, 2vw, 32px); row-gap: 8px; }
+.figure { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: clamp(16px, 2vw, 32px); row-gap: 8px; }
+/* A gift lands on the number the room is watching: "+R$ 450" in that gift's
+   palette colour, the same colour its hexagons light up in. Placed by showGain(). */
+.gain {
+	position: absolute; left: 0; top: 0;
+	padding: 0.1em 0.38em 0.14em;
+	border-radius: 0.28em;
+	background: var(--c); color: var(--on);
+	font-weight: 900; line-height: 1.1; /* size set by showGain(), relative to the total */
+	font-variant-numeric: tabular-nums; white-space: nowrap;
+	translate: var(--x, 0) var(--y, 0);
+	opacity: 0; pointer-events: none;
+}
+.gain.show { animation: gain 2.8s var(--ease-out) both; }
+@keyframes gain {
+	0% { opacity: 0; transform: translateY(0.4em) scale(0.85); }
+	12%, 82% { opacity: 1; transform: none; }
+	100% { opacity: 0; transform: translateY(-0.25em); }
+}
 .count { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; font-size: clamp(18px, 3vh, 36px); color: var(--cinza-muted); }
 .count strong { font-weight: 600; color: var(--cinza); }
 
@@ -318,8 +339,17 @@ body { overflow: hidden; }
 	transform: translateX(calc(var(--pct) - 100%));
 	transition: transform 0.9s var(--ease-in-out);
 }
-.goal-text { margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(16px, 2.4vh, 26px); }
+.goal-text {
+	display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; column-gap: 24px; row-gap: 4px;
+	margin: 0; font-variant-numeric: tabular-nums; font-size: clamp(16px, 2.4vh, 26px);
+}
 .goal-text strong { font-weight: 900; color: var(--teal); }
+/* Past the goal the bar turns teal with the total, and the line says so. */
+.goal.reached .fill { background: var(--teal); }
+.goal.reached .remaining { font-weight: 900; color: var(--teal); }
+/* Goal beaten: the total joins "R$" and "Meta batida!" in teal (5.3:1). */
+.total { transition: color 0.6s var(--ease); }
+.total-block.reached .total { color: var(--teal); }
 
 /* ── Recent donations ─────────────────────────────── */
 /* Its own block: well clear of the goal above, heading tight to the rows it
@@ -350,16 +380,16 @@ body { overflow: hidden; }
 .recent .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .recent time { font-variant-numeric: tabular-nums; color: var(--cinza-muted); }
 .recent li.new {
-	/* A quick drop-in, then a slow glow so the eye finds it across the room.
-	   Several at once cascade 60ms apart. */
+	/* A quick drop-in, then a soft tint of its gift's palette colour that fades
+	   out; the chip by the total carries the loud part. Several cascade 60ms apart. */
 	--delay: calc(var(--i, 0) * 60ms);
 	animation:
 		arrive 320ms var(--ease-out) var(--delay) backwards,
-		glow 2.4s ease-out var(--delay) backwards;
+		flash 2.8s ease-out var(--delay) backwards;
 }
 @keyframes arrive { from { opacity: 0; transform: translateY(-8px); } }
-@keyframes glow {
-	0%, 35% { background: var(--turquesa-tint); }
+@keyframes flash {
+	0%, 35% { background: color-mix(in oklab, var(--c) 28%, transparent); }
 	100% { background: transparent; }
 }
 .empty { margin: 0; padding-left: 12px; text-wrap: pretty; font-size: clamp(18px, 2.6vh, 28px); color: var(--cinza-muted); }
@@ -392,6 +422,10 @@ body { overflow: hidden; }
 	fill: var(--lit);
 	transition-duration: 220ms;
 }
+/* The goal sweep pops cells on and off: hundreds of palette colours fading
+   through turquoise at once read muddy. */
+.lattice use.pop { transition: none; }
+
 .lattice {
 	/* The lattice dissolves around the caption, so no line crosses the text; the
 	   white hexagon already covers it behind the QR. Position set by clearCaption(). */
@@ -440,8 +474,10 @@ body { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
 	.fill { transition: none; }
-	/* No movement, but keep the colour cue: it is how a new donation is noticed. */
-	.recent li.new { animation: glow 2.4s ease-out backwards; }
+	/* No movement, but keep the colour cues: they are how a new donation is noticed. */
+	.recent li.new { animation: flash 2.8s ease-out backwards; }
+	.gain.show { animation-name: gain-fade; }
+	@keyframes gain-fade { 0%, 100% { opacity: 0; } 8%, 85% { opacity: 1; } }
 }
 </style>
 </head>
@@ -453,10 +489,11 @@ body { overflow: hidden; }
 			<h1>${title}</h1>
 		</header>
 
-		<div class="total-block">
+		<div class="total-block${page.goalCents && summary.totalCents >= page.goalCents ? " reached" : ""}">
 			<div class="figure">
 				<p class="total" id="total-line" aria-live="polite"><span class="cur">R$</span><span id="total">${formatReais(summary.totalCents).replace(/^R\$\s*/, "")}</span></p>
 				<p class="count" id="count-line"><strong id="count">${countLabel(summary.count)}</strong></p>
+				<span class="gain" id="gain" aria-hidden="true"></span>
 			</div>
 			${goalBlock(page, summary.totalCents)}
 		</div>
@@ -573,20 +610,45 @@ addEventListener("resize", () => {
 	resizeFrame = requestAnimationFrame(() => { fitTotal(state.summary.totalCents); buildLattice(); clearCaption(); });
 });
 
-function renderGoal(totalCents) {
-	$("goal").hidden = !state.goalCents;
-	if (!state.goalCents) return;
-	const pct = Math.min(100, totalCents / state.goalCents * 100);
-	$("fill").style.setProperty("--pct", pct + "%");
-	$("pct").textContent = Math.floor(pct) + "%";
-	$("goal-amount").textContent = reais(state.goalCents);
-	document.querySelector("[role=progressbar]").setAttribute("aria-valuenow", Math.floor(pct));
+// prevCents is the total before this update; crossing the goal live (not on
+// load, not by editing the goal) is the night's big moment.
+function renderGoal(totalCents, prevCents) {
+	const goal = $("goal"), target = state.goalCents;
+	goal.hidden = !target;
+	if (!target) return goal.parentElement.classList.remove("reached");
+	const pct = Math.floor(totalCents / target * 100);
+	const reached = totalCents >= target;
+	$("fill").style.setProperty("--pct", Math.min(100, pct) + "%");
+	$("pct").textContent = number.format(pct) + "%";
+	$("goal-amount").textContent = reais(target);
+	$("remaining").innerHTML = reached ? "Meta batida!" : "faltam <strong>" + reais(target - totalCents) + "</strong>";
+	const bar = goal.querySelector("[role=progressbar]");
+	bar.setAttribute("aria-valuenow", Math.min(100, pct));
+	bar.setAttribute("aria-valuetext", pct + "% da meta");
+	if (reached && prevCents !== undefined && prevCents < target && !goal.classList.contains("reached")) {
+		// Let the bar finish filling, then switch it to the palette and light the lattice.
+		loadConfetti().catch(() => {}); // fetch while the bar fills
+		setTimeout(() => {
+			goal.classList.add("reached");
+			goal.parentElement.classList.add("reached");
+			celebrateGoal();
+			fireConfetti();
+		}, reduced ? 0 : 900);
+	} else {
+		goal.classList.toggle("reached", reached);
+		goal.parentElement.classList.toggle("reached", reached);
+	}
 }
 
 // A new donation fills one lattice cell with a hexagon palette colour for a
 // moment — the cell itself, in place — away from the QR, the caption and the
 // demo controls.
-const PALETTE = ["#76B837", "#F9B114", "#EC6730", "#0095DB", "#6859A3", "#E62A4A"];
+// The hexagon palette with teal in place of red: red reads as a warning, not a
+// celebration. "on": the text colour that reads on it (large bold text, all ≥3.6:1).
+const PALETTE = [
+	{ c: "#76B837", on: "#373636" }, { c: "#F9B114", on: "#373636" }, { c: "#EC6730", on: "#373636" },
+	{ c: "#0095DB", on: "#373636" }, { c: "#6859A3", on: "#FFFFFF" }, { c: "#1E7387", on: "#FFFFFF" },
+];
 const HEX = { w: ${HEX_W}, row: ${HEX_ROW} };
 const LIT_MS = 2400;
 
@@ -632,7 +694,10 @@ function vertices(r) {
 }
 const recentSparks = [];
 
-function spark(delay) {
+// Bigger gifts light more cells: a small cluster around one spot.
+const cellsFor = (cents) => cents >= 1000000 ? 7 : cents >= 500000 ? 5 : cents >= 100000 ? 3 : 1;
+
+function spark(delay, colour, size = 1) {
 	const svg = document.querySelector(".lattice");
 	if (getComputedStyle(svg).display === "none") return;
 	const box = svg.getBoundingClientRect();
@@ -669,21 +734,124 @@ function spark(delay) {
 	recentSparks.push({ x: pick.x, y: pick.y });
 	if (recentSparks.length > 8) recentSparks.shift();
 
-	const cell = pick.cell;
-	cell.dataset.pending = "1";
-	setTimeout(() => {
-		delete cell.dataset.pending;
-		cell.style.setProperty("--lit", nextColour());
-		cell.classList.add("lit");
-		setTimeout(() => cell.classList.remove("lit"), LIT_MS);
-	}, delay);
+	// The seed plus its nearest free neighbours.
+	const cluster = free
+		.map((c) => ({ ...c, d: Math.hypot(c.x - pick.x, c.y - pick.y) }))
+		.sort((a, b) => a.d - b.d)
+		.slice(0, size);
+	cluster.forEach(({ cell }, i) => {
+		cell.dataset.pending = "1";
+		setTimeout(() => {
+			delete cell.dataset.pending;
+			cell.style.setProperty("--lit", colour.c);
+			cell.classList.add("lit");
+			setTimeout(() => cell.classList.remove("lit"), LIT_MS);
+		}, delay + (reduced ? 0 : i * 70));
+	});
 }
 
-function row(r, freshIndex) {
+// The goal is crossed: every cell lights in a palette colour, sweeping from
+// the top-left corner across the panel.
+function celebrateGoal() {
+	const svg = document.querySelector(".lattice");
+	if (getComputedStyle(svg).display === "none") return;
+	const box = svg.getBoundingClientRect();
+	[...$("cells").children].forEach((cell) => {
+		if (cell.classList.contains("lit") || cell.dataset.pending) return;
+		const r = cell.getBoundingClientRect();
+		const along = (r.left - box.left + r.top - box.top) / (box.width + box.height);
+		cell.dataset.pending = "1";
+		setTimeout(() => {
+			delete cell.dataset.pending;
+			cell.style.setProperty("--lit", PALETTE[Math.floor(Math.random() * PALETTE.length)].c);
+			cell.classList.add("pop", "lit");
+			setTimeout(() => cell.classList.remove("lit"), 1600);
+			setTimeout(() => cell.classList.remove("pop"), 1650);
+		}, reduced ? 0 : along * 1400);
+	});
+}
+
+// Goal crossed: confetti explosions all over the board for a few seconds, in
+// palette hexagons. The library is self-hosted and loads only at this moment,
+// so a normal night never downloads it and venue wifi can't block it.
+const CONFETTI_MS = 10000;
+let confettiLib = null;
+function loadConfetti() {
+	confettiLib ??= new Promise((resolve, reject) => {
+		const script = document.createElement("script");
+		script.src = "/vendor/tsparticles-confetti-4.4.0.min.js";
+		script.onload = () => resolve(globalThis.confetti);
+		script.onerror = () => { confettiLib = null; reject(new Error("confetti")); };
+		document.head.append(script);
+	});
+	return confettiLib;
+}
+async function fireConfetti() {
+	if (reduced) return;
+	try {
+		const confetti = await loadConfetti();
+		const board = document.querySelector(".board").getBoundingClientRect();
+		const between = (a, b) => a + Math.random() * (b - a);
+		const colors = PALETTE.map((p) => p.c);
+		const start = performance.now();
+		// A burst every 250ms at a random spot over the board, thinning out toward the end.
+		const timer = setInterval(() => {
+			const left = 1 - (performance.now() - start) / CONFETTI_MS;
+			if (left <= 0) return clearInterval(timer);
+			confetti({
+				count: Math.round(70 * left) + 20,
+				spread: 360,
+				startVelocity: 35,
+				ticks: 220,
+				gravity: 0.9,
+				scalar: 2.2,
+				zIndex: 20,
+				colors,
+				shapes: ["polygon", "square"],
+				shapeOptions: { polygon: { sides: 6 } },
+				position: {
+					x: between(board.left + board.width * 0.1, board.right - board.width * 0.1) / innerWidth * 100,
+					y: between(10, 55),
+				},
+			});
+		}, 250);
+	} catch {
+		// No confetti is fine: the lattice sweep and "Meta batida!" still mark the moment.
+	}
+}
+
+// "+R$ 450" rides just above the number's last digits, in the space under the
+// masthead; it drops onto the digits' top edge only when the title is in the way.
+function showGain(cents, colour) {
+	const gain = $("gain"), fig = gain.parentElement, line = $("total-line");
+	gain.textContent = "+" + reais(cents);
+	gain.style.setProperty("--c", colour.c);
+	gain.style.setProperty("--on", colour.on);
+	// In proportion to the total on every screen; R$ 5.000+ gifts get a bigger chip.
+	const totalSize = parseFloat(getComputedStyle(line).fontSize);
+	gain.style.fontSize = Math.max(20, Math.min(110, totalSize * (cents >= 500000 ? 0.4 : 0.28))) + "px";
+	const f = fig.getBoundingClientRect(), l = line.getBoundingClientRect();
+	const w = gain.offsetWidth, h = gain.offsetHeight;
+	// The digits' ink starts ~0.08em below the line box (line-height 0.9).
+	const inkTop = l.top + totalSize * 0.08;
+	const x = Math.max(0, Math.min(l.right - f.left - w, f.width - w));
+	let y = inkTop - f.top - h - 6;
+	const title = document.querySelector(".masthead h1").getBoundingClientRect();
+	const top = f.top + y, left = f.left + x;
+	if (top < title.bottom && left < title.right && left + w > title.left) y = inkTop - f.top - h * 0.5;
+	gain.style.setProperty("--x", x + "px");
+	gain.style.setProperty("--y", y + "px");
+	gain.classList.remove("show");
+	void gain.offsetWidth; // restart the animation when gifts land back to back
+	gain.classList.add("show");
+}
+
+function row(r, freshIndex, colour) {
 	const li = document.createElement("li");
 	if (freshIndex !== undefined) {
 		li.className = "new";
 		li.style.setProperty("--i", freshIndex);
+		li.style.setProperty("--c", colour.c);
 	}
 	li.innerHTML = '<span class="amount">' + reais(r.amountCents) + '</span><time datetime="' +
 		new Date(r.paidAt * 1000).toISOString() + '">' + when(r.paidAt) + '</time>';
@@ -693,24 +861,25 @@ function row(r, freshIndex) {
 const sameRow = (a, b) => a.amountCents === b.amountCents && a.paidAt === b.paidAt;
 
 // Newest first, so whatever arrived since the last poll sits on top. When the
-// update is a clean prepend, existing rows keep their DOM nodes: a glow still
+// update is a clean prepend, existing rows keep their DOM nodes: a highlight still
 // running is not cut short by the next poll.
-function renderRecent(prev, next) {
+function renderRecent(prev, next, newCount, colours) {
 	const ol = $("recent");
-	const newCount = Math.max(0, next.count - prev.count);
-	for (let i = 0; i < Math.min(newCount, 6); i++) spark(i * 120);
+	for (let i = 0; i < Math.min(newCount, 6); i++) {
+		spark(i * 120, colours[i], cellsFor(next.recent[i]?.amountCents ?? 0));
+	}
 	const kept = next.recent.slice(newCount);
 	const isPrepend = newCount > 0 && ol.children.length === prev.recent.length &&
 		kept.every((r, j) => prev.recent[j] && sameRow(r, prev.recent[j]));
 
 	if (isPrepend) {
-		ol.prepend(...next.recent.slice(0, newCount).map((r, i) => row(r, i)));
+		ol.prepend(...next.recent.slice(0, newCount).map((r, i) => row(r, i, colours[i])));
 		while (ol.children.length > next.recent.length) ol.lastElementChild.remove();
 		// Day labels roll over at midnight even when nothing new arrives.
 		next.recent.forEach((r, i) => { ol.children[i].querySelector("time").textContent = when(r.paidAt); });
 		return;
 	}
-	ol.replaceChildren(...next.recent.map((r, i) => row(r, i < newCount ? i : undefined)));
+	ol.replaceChildren(...next.recent.map((r, i) => row(r, i < newCount ? i : undefined, colours[i])));
 }
 
 function render(next) {
@@ -719,9 +888,14 @@ function render(next) {
 	fitTotal(Math.max(next.totalCents, shownCents));
 	if (next.totalCents !== prev.totalCents) countUp(next.totalCents);
 
-	renderGoal(next.totalCents);
+	// Each new gift gets one palette colour, shared by its row, its hexagons and the chip.
+	const newCount = Math.max(0, next.count - prev.count);
+	const colours = Array.from({ length: Math.min(newCount, next.recent.length) }, nextColour);
+	if (newCount > 0 && next.totalCents > prev.totalCents) showGain(next.totalCents - prev.totalCents, colours[0]);
 
-	renderRecent(prev, next);
+	renderGoal(next.totalCents, prev.totalCents);
+
+	renderRecent(prev, next, newCount, colours);
 	if (next.count > 0) $("empty")?.remove();
 
 	state.summary = next;

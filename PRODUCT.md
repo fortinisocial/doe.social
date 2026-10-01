@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Primary: **guests and donors at Fortini Social fundraising events** — families, partners and supporters in the room, watching a live donation page on a big screen and deciding whether to scan the QR code and give. The same people, and anyone the link reaches, also open the page **on their phones** after scanning, or **online** when it is shared in messages, social media or a livestream.
+Primary: **guests and donors at Fortini Social fundraising events** — families, partners and supporters in the room, watching a live donation page on a big screen and deciding whether to scan the QR code and give. Scanning the QR goes straight to the Stripe checkout (via the Dub short link), not to this page; the page itself reaches **phones** and **desktops online** when the link is shared in messages, social media or a livestream.
 
 Secondary: **Fortini staff** (e.g. the CEO and the team running the event) who create and manage campaign pages in `/admin` before and during an event.
 
@@ -25,7 +25,7 @@ A campaign page that is the event's live scoreboard and its donation entry point
 ## Operating Context
 
 - **Big screen at in-person events:** TVs, monitors and projectors of uneven quality (washed-out color, low contrast), read from across a room, left running unattended for hours. Seen by a crowd, not operated.
-- **Phones after scanning the QR:** the same page collapses to a mobile layout with a "Doar agora" button instead of the QR.
+- **Phones (shared link):** the same page collapses to a mobile layout with a "Doar agora" button instead of the QR. Scanning the QR itself skips this page and opens the Stripe checkout.
 - **Shared online / livestream:** the link circulates beyond the room.
 - **Before the event:** staff create a page in `/admin` (title, optional goal, Stripe payment link), get a Dub short link and QR, and can rehearse with `/<slug>/demo`, which simulates donations with fictitious values.
 - Language: Brazilian Portuguese (pt-BR), BRL amounts.

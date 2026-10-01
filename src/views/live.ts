@@ -327,9 +327,9 @@ body { overflow: hidden; }
 .count strong { font-weight: 600; color: var(--cinza); }
 
 .goal { display: grid; gap: 10px; max-width: 64rem; margin-top: clamp(4px, 1vh, 12px); }
-/* Brand blue on light gray (2.7:1): saturated enough to hold on a washed-out
-   projector, where turquoise on light gray (1.4:1) all but disappears. */
-.track { height: clamp(14px, 2.2vh, 24px); border-radius: 999px; background: var(--track); overflow: hidden; }
+/* Brand blue on a mid-light gray track: the track reads against the page on TVs
+   (1.5:1, the old 1.2:1 vanished) and the fill still stands out from it (2.2:1). */
+.track { height: clamp(14px, 2.2vh, 24px); border-radius: 999px; background: var(--divider); overflow: hidden; }
 .fill {
 	/* Full-width bar slid into place: transform stays on the GPU, and the track's
 	   overflow keeps both ends rounded at any percentage. */
@@ -376,7 +376,8 @@ body { overflow: hidden; }
 	border-radius: 8px;
 	white-space: nowrap;
 }
-.recent li::after { content: ""; position: absolute; inset: auto 12px 0; height: 1px; background: var(--track); }
+/* 2px at 1.9:1: a 1px line in the track grey (1.2:1) disappeared on TVs. */
+.recent li::after { content: ""; position: absolute; inset: auto 12px 0; height: 2px; background: #B3B8BA; }
 .recent .amount { font-weight: 600; font-variant-numeric: tabular-nums; }
 .recent time { font-variant-numeric: tabular-nums; color: var(--cinza-muted); }
 .recent li.new {

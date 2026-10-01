@@ -285,7 +285,9 @@ body { overflow: hidden; }
 	text-wrap: balance;
 }
 
-.total-block { display: grid; gap: clamp(8px, 1.5vh, 16px); }
+/* minmax(0, …): fitTotal() measures this row with the number at full size; an
+   auto column would widen to that number and report room the row doesn't have. */
+.total-block { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(8px, 1.5vh, 16px); }
 .total {
 	margin: 0;
 	font-weight: 900;

@@ -320,8 +320,13 @@ body { overflow: hidden; }
 .goal-text strong { font-weight: 900; color: var(--teal); }
 
 /* ── Recent donations ─────────────────────────────── */
-.recent { margin-inline: -12px; min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
-.recent h2 { margin: 0; padding-left: 12px; font-size: clamp(14px, 1.8vh, 18px); font-weight: 600; color: var(--cinza-muted); }
+/* Its own block: well clear of the goal above, heading tight to the rows it
+   names (inter-group space ~3x intra-group), so it never reads as a caption. */
+.recent { margin-inline: -12px; margin-top: clamp(16px, 4vh, 48px); min-height: 0; overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: clamp(8px, 1vh, 12px); }
+.recent h2 {
+	margin: 0; padding-left: 12px;
+	font-size: clamp(16px, 2.2vh, 24px); font-weight: 600; color: var(--cinza);
+}
 .recent ol {
 	list-style: none; margin: 0; padding: 0;
 	/* Columns read top to bottom, newest first. Balanced when everything fits;

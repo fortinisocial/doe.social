@@ -500,9 +500,9 @@ body { overflow: hidden; }
 		</div>
 
 		<section class="recent" aria-label="Últimas doações">
-			<h2>Últimas doações</h2>
-			<ol id="recent"></ol>
+			<h2 id="recent-title" ${summary.count === 0 ? "hidden" : ""}>Últimas doações</h2>
 			${summary.count === 0 ? `<p class="empty" id="empty">A primeira doação aparece aqui assim que chegar.</p>` : ""}
+			<ol id="recent"></ol>
 		</section>
 	</section>
 
@@ -897,7 +897,11 @@ function render(next) {
 	renderGoal(next.totalCents, prev.totalCents);
 
 	renderRecent(prev, next, newCount, colours);
-	if (next.count > 0) $("empty")?.remove();
+	// Until the first gift the hint stands in for the heading, in its row.
+	if (next.count > 0) {
+		$("empty")?.remove();
+		$("recent-title").hidden = false;
+	}
 
 	state.summary = next;
 }

@@ -6,6 +6,7 @@
 const API = "https://api.dub.co";
 
 export interface DubLink {
+	id: string;
 	key: string;
 	url: string;
 	shortLink: string;
@@ -48,10 +49,15 @@ export async function findDubLinkFor(
 	apiKey: string,
 	paymentCode: string,
 ): Promise<DubLink | undefined> {
+	return (await findDubLinksFor(apiKey, paymentCode))[0];
+}
+
+/** Every short link pointing at this payment link. */
+export async function findDubLinksFor(apiKey: string, paymentCode: string): Promise<DubLink[]> {
 	const params = new URLSearchParams({ search: paymentCode, pageSize: "100" });
 	const { status, body } = await dub<DubLink[]>(apiKey, `/links?${params}`);
 	if (!body) throw new Error(`dub links ${status}`);
-	return body.find((link) => link.url.includes(paymentCode));
+	return body.filter((link) => link.url.includes(paymentCode));
 }
 
 export type CreateResult =
@@ -70,6 +76,12 @@ export async function createDubLink(
 	});
 	if (body) return { ok: true, link: body };
 	return { ok: false, reason: status === 409 ? "taken" : "error", status };
+}
+
+/** Deletes a short link for good; anything still pointing at it (printed QRs) stops working. */
+export async function deleteDubLink(apiKey: string, id: string): Promise<void> {
+	const { status } = await dub<unknown>(apiKey, `/links/${encodeURIComponent(id)}`, { method: "DELETE" });
+	if (status !== 200 && status !== 404) throw new Error(`dub delete ${status}`);
 }
 
 /** Dub's public QR renderer — no API key, so the page can load it directly. */

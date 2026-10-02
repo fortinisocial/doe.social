@@ -5,7 +5,7 @@ interface AdminView {
 	user: string;
 	pages: PageConfig[];
 	/** Values to refill the form with — after an error, or when editing. */
-	form?: { link?: string; slug?: string; title?: string; goal?: string; editing?: boolean };
+	form?: { link?: string; slug?: string; title?: string; goal?: string; editing?: boolean; shortLink?: string };
 	error?: string;
 	notice?: string;
 }
@@ -20,6 +20,18 @@ function pageRow(page: PageConfig): string {
 	</div>
 	<a class="edit" href="/admin?editar=${slug}">Editar</a>
 </li>`;
+}
+
+function deleteForm(slug: string, shortLink?: string): string {
+	const short = shortLink ? escapeHtml(shortLink.replace(/^https?:\/\//, "")) : "";
+	return `<form class="danger" method="post" action="/admin" onsubmit="return confirm('Excluir doe.social/${escapeHtml(slug)}? Não dá para desfazer.')">
+		<h2>Excluir página</h2>
+		<p>A página sai do ar e o endereço doe.social/${escapeHtml(slug)} passa a levar para o site da Fortini. As doações continuam no Stripe.</p>
+		${short ? `<label class="check"><input type="checkbox" name="dub" value="1"> <span>Apagar também ${short}. QR codes e links já divulgados param de funcionar.</span></label>` : ""}
+		<input type="hidden" name="action" value="delete">
+		<input type="hidden" name="slug" value="${escapeHtml(slug)}">
+		<button type="submit" class="delete">Excluir página</button>
+	</form>`;
 }
 
 export function renderAdmin({ user, pages, form = {}, error, notice }: AdminView): string {
@@ -76,6 +88,11 @@ li div { display: grid; gap: 4px; min-width: 0; }
 .edit, .cancel { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px; margin-inline: -8px; }
 .edit { font-size: 15px; font-weight: 600; color: var(--turquesa-on-light); }
 .cancel { justify-self: start; font-size: 15px; color: var(--cinza-muted); }
+.danger { gap: 16px; }
+.danger h2 { margin: 0; }
+.check { display: flex; align-items: flex-start; gap: 10px; font-weight: 300; line-height: 1.4; }
+.check input { margin: 3px 0 0; width: 18px; height: 18px; accent-color: var(--teal); }
+button.delete { background: #A3112B; }
 </style>
 </head>
 <body>
@@ -111,6 +128,7 @@ li div { display: grid; gap: 4px; min-width: 0; }
 		<button type="submit">${form.editing ? "Salvar alterações" : "Criar página"}</button>
 		${form.editing ? `<a class="cancel" href="/admin">Cancelar edição</a>` : ""}
 	</form>
+	${form.editing ? deleteForm(form.slug ?? "", form.shortLink) : ""}
 
 	<section>
 		<h2>Páginas</h2>

@@ -1,5 +1,5 @@
 import { accessUser } from "./access";
-import { createDubLink, findDubLinkFor, getDubLink, qrImageUrl } from "./dub";
+import { createDubLink, deleteDubLink, findDubLinkFor, findDubLinksFor, getDubLink, qrImageUrl } from "./dub";
 import {
 	getPage,
 	listPages,
@@ -11,6 +11,7 @@ import {
 } from "./pages";
 import { findPaymentLink, listDonations, paymentLinkCode } from "./stripe";
 import { renderAdmin } from "./views/admin";
+import { escapeHtml } from "./views/shared";
 import { renderLive } from "./views/live";
 
 const HOME = "https://fortini.org.br/doe";
@@ -156,6 +157,58 @@ async function ensureShortLink(
 	return { note: "O Dub não respondeu, então o QR aponta direto para o Stripe." };
 }
 
+/**
+ * The short link as Dub has it now. A page keeps the link it was created with,
+ * so one renamed or deleted in Dub would leave a dead link and QR on screen;
+ * saving the page picks up the change. If Dub can't be reached, keep what we have.
+ */
+async function currentShortLink(env: Env, page: PageConfig): Promise<string | undefined> {
+	const code = paymentLinkCode(page.paymentUrl);
+	if (!code) return page.shortLink;
+	try {
+		const links = await findDubLinksFor(env.DUB_API_KEY, code);
+		return (links.find((l) => l.shortLink === page.shortLink) ?? links[0])?.shortLink;
+	} catch (error) {
+		log("dub_refresh_failed", { slug: page.slug, error: String(error) });
+		return page.shortLink;
+	}
+}
+
+/**
+ * Removes a page and, if asked, its dub.sh link — but only a link that points
+ * at this page's payment link and that no other page still shows.
+ */
+async function handleDelete(env: Env, user: string, slug: string, withDub: boolean): Promise<Response> {
+	const page = await getPage(env.PAGES, slug);
+	const done = async (status: number, message: { error?: string; notice?: string }) =>
+		html(renderAdmin({ user, pages: await listPages(env.PAGES), ...message }), status);
+	if (!page) return done(404, { error: `doe.social/${slug} não existe mais.` });
+
+	let dubNote = "";
+	if (withDub && page.shortLink) {
+		const short = new URL(page.shortLink);
+		const shared = (await listPages(env.PAGES)).some((p) => p.slug !== slug && p.shortLink === page.shortLink);
+		try {
+			const link = shared ? undefined : await getDubLink(env.DUB_API_KEY, short.hostname, short.pathname.slice(1));
+			if (shared) {
+				dubNote = ` ${short.host}${short.pathname} continua, porque outra página usa o mesmo link.`;
+			} else if (link && paymentLinkCode(link.url) === paymentLinkCode(page.paymentUrl)) {
+				await deleteDubLink(env.DUB_API_KEY, link.id);
+				dubNote = ` ${short.host}${short.pathname} também foi apagado.`;
+			} else if (link) {
+				dubNote = ` ${short.host}${short.pathname} continua, porque hoje aponta para outro link de pagamento.`;
+			}
+		} catch (error) {
+			log("dub_delete_failed", { slug, error: String(error) });
+			return done(502, { error: "Não consegui apagar o link no Dub, então a página não foi excluída. Tente de novo." });
+		}
+	}
+
+	await env.PAGES.delete(slug);
+	log("page_deleted", { slug, withDub, user });
+	return done(200, { notice: `Página doe.social/${escapeHtml(slug)} excluída.${escapeHtml(dubNote)}` });
+}
+
 async function handleAdmin(request: Request, env: Env): Promise<Response> {
 	const user = await accessUser(request, env);
 	if (!user) return new Response("Acesso restrito.", { status: 403 });
@@ -175,6 +228,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 							title: page.title,
 							goal: page.goalCents ? String(page.goalCents / 100) : "",
 							editing: true,
+							shortLink: page.shortLink,
 						}
 					: undefined,
 			}),
@@ -188,6 +242,9 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 	}
 
 	const data = await request.formData();
+	if (data.get("action") === "delete") {
+		return handleDelete(env, user, String(data.get("slug") ?? ""), data.get("dub") === "1");
+	}
 	const form = {
 		link: String(data.get("link") ?? ""),
 		slug: String(data.get("slug") ?? "").trim().toLowerCase(),
@@ -206,14 +263,21 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 	const existing = await getPage(env.PAGES, form.slug);
 	if (form.editing) {
 		if (!existing) return fail("Essa página não existe mais.");
-		const updated: PageConfig = { ...existing, title: form.title, goalCents };
+		const shortLink = await currentShortLink(env, existing);
+		const updated: PageConfig = { ...existing, title: form.title, goalCents, shortLink };
 		await env.PAGES.put(form.slug, JSON.stringify(updated));
 		log("page_updated", { slug: form.slug, user });
+		const linkNote =
+			shortLink === existing.shortLink
+				? ""
+				: shortLink
+					? ` O QR agora usa ${escapeHtml(shortLink)}.`
+					: " O link no Dub não existe mais, então o QR aponta direto para o Stripe.";
 		return html(
 			renderAdmin({
 				user,
 				pages: await listPages(env.PAGES),
-				notice: `Página <a href="/${form.slug}" target="_blank">doe.social/${form.slug}</a> atualizada.`,
+				notice: `Página <a href="/${form.slug}" target="_blank">doe.social/${form.slug}</a> atualizada.${linkNote}`,
 			}),
 		);
 	}

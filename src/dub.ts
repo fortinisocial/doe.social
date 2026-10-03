@@ -83,16 +83,3 @@ export async function deleteDubLink(apiKey: string, id: string): Promise<void> {
 	const { status } = await dub<unknown>(apiKey, `/links/${encodeURIComponent(id)}`, { method: "DELETE" });
 	if (status !== 200 && status !== 404) throw new Error(`dub delete ${status}`);
 }
-
-/** Dub's public QR renderer — no API key, so the page can load it directly. */
-export function qrImageUrl(target: string): string {
-	const params = new URLSearchParams({
-		url: target,
-		size: "800",
-		level: "Q",
-		fgColor: "#373636",
-		hideLogo: "true",
-		margin: "0",
-	});
-	return `${API}/qr?${params}`;
-}

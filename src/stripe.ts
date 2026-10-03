@@ -1,6 +1,6 @@
 /**
  * Read-only Stripe access. The restricted key needs Checkout Sessions,
- * Payment Intents and Payment Links read — nothing else.
+ * Payment Intents, Payment Links and Subscriptions read — nothing else.
  */
 
 export interface PaymentLink {
@@ -20,13 +20,25 @@ interface StripeList<T> {
 	has_more: boolean;
 }
 
+interface Subscription {
+	status: "active" | "past_due" | "unpaid" | "canceled" | "incomplete" | "incomplete_expired" | "trialing" | "paused";
+	items: {
+		data: {
+			quantity?: number;
+			price: { unit_amount: number | null; recurring: { interval: "day" | "week" | "month" | "year"; interval_count: number } | null };
+		}[];
+	};
+}
+
 interface CheckoutSession {
 	id: string;
 	amount_total: number | null;
 	currency: string | null;
 	created: number;
+	mode?: "payment" | "subscription" | "setup";
 	payment_status: "paid" | "unpaid" | "no_payment_required";
 	payment_intent: { created: number } | string | null;
+	subscription?: Subscription | string | null;
 }
 
 async function stripeGet<T>(
@@ -74,6 +86,28 @@ export async function findPaymentLink(
 	}
 }
 
+async function listCompletedSessions(
+	key: string,
+	paymentLinkId: string,
+	expand: string,
+): Promise<CheckoutSession[]> {
+	const sessions: CheckoutSession[] = [];
+	let startingAfter: string | undefined;
+	for (;;) {
+		const params = new URLSearchParams({
+			payment_link: paymentLinkId,
+			status: "complete",
+			limit: "100",
+			"expand[]": expand,
+		});
+		if (startingAfter) params.set("starting_after", startingAfter);
+		const page = await stripeGet<StripeList<CheckoutSession>>(key, "checkout/sessions", params);
+		sessions.push(...page.data);
+		if (!page.has_more) return sessions;
+		startingAfter = page.data.at(-1)?.id;
+	}
+}
+
 /**
  * Every paid checkout of a payment link. `payment_status === "paid"` drops
  * boletos that were issued but not yet paid. The payment intent's creation
@@ -85,30 +119,48 @@ export async function listDonations(
 	paymentLinkId: string,
 ): Promise<Donation[]> {
 	const donations: Donation[] = [];
-	let startingAfter: string | undefined;
-	for (;;) {
-		const params = new URLSearchParams({
-			payment_link: paymentLinkId,
-			status: "complete",
-			limit: "100",
-			"expand[]": "data.payment_intent",
+	for (const session of await listCompletedSessions(key, paymentLinkId, "data.payment_intent")) {
+		if (session.payment_status !== "paid" || !session.amount_total) continue;
+		const intent = session.payment_intent;
+		donations.push({
+			amountCents: session.amount_total,
+			paidAt: typeof intent === "object" && intent ? intent.created : session.created,
 		});
-		if (startingAfter) params.set("starting_after", startingAfter);
-		const page = await stripeGet<StripeList<CheckoutSession>>(
-			key,
-			"checkout/sessions",
-			params,
-		);
-		for (const session of page.data) {
-			if (session.payment_status !== "paid" || !session.amount_total) continue;
-			const intent = session.payment_intent;
-			donations.push({
-				amountCents: session.amount_total,
-				paidAt: typeof intent === "object" && intent ? intent.created : session.created,
-			});
-		}
-		if (!page.has_more) break;
-		startingAfter = page.data.at(-1)?.id;
 	}
 	return donations.sort((a, b) => b.paidAt - a.paidAt);
+}
+
+// How many of each billing interval fit in a month.
+const PER_MONTH = { day: 365 / 12, week: 52 / 12, month: 1, year: 1 / 12 } as const;
+
+/** What a subscription brings in per month, whatever its billing interval. */
+function monthlyCents(subscription: Subscription): number {
+	let cents = 0;
+	for (const item of subscription.items.data) {
+		const recurring = item.price.recurring;
+		if (!recurring || !item.price.unit_amount) continue;
+		cents += (item.price.unit_amount * (item.quantity ?? 1) * PER_MONTH[recurring.interval]) / recurring.interval_count;
+	}
+	return Math.round(cents);
+}
+
+/**
+ * Monthly donors who signed up through a payment link and still give: one
+ * entry per subscription that is active today, so a cancellation drops out.
+ * `amountCents` is what it brings in per month; `paidAt` is when they signed up.
+ * Needs Subscriptions read on the key (the subscription is expanded).
+ */
+export async function listMonthlyDonors(
+	key: string,
+	paymentLinkId: string,
+): Promise<Donation[]> {
+	const donors: Donation[] = [];
+	for (const session of await listCompletedSessions(key, paymentLinkId, "data.subscription")) {
+		const subscription = session.subscription;
+		if (session.mode !== "subscription" || typeof subscription !== "object" || !subscription) continue;
+		if (subscription.status !== "active") continue;
+		const amountCents = monthlyCents(subscription);
+		if (amountCents) donors.push({ amountCents, paidAt: session.created });
+	}
+	return donors.sort((a, b) => b.paidAt - a.paidAt);
 }

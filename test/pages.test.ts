@@ -32,7 +32,6 @@ test("slugs are url-safe and never shadow reserved paths", () => {
 	expect(validSlug("festa-das-criancas")).toBe(true);
 	expect(validSlug("admin")).toBe(false);
 	expect(validSlug("redesoma")).toBe(false);
-	expect(validSlug("loucas-por-tennis")).toBe(false);
 	expect(validSlug("-festa")).toBe(false);
 	expect(validSlug("Festa")).toBe(false);
 });

@@ -1,21 +1,28 @@
-import type { PageConfig } from "../pages";
+import { cadenceOf, linkIdsOf, type PageConfig } from "../pages";
 import { escapeHtml, FONT_FACES, formatReais, HEAD_COMMON, TOKENS } from "./shared";
 
 interface AdminView {
 	user: string;
 	pages: PageConfig[];
 	/** Values to refill the form with — after an error, or when editing. */
-	form?: { link?: string; slug?: string; title?: string; goal?: string; editing?: boolean; shortLink?: string };
+	form?: { link?: string; slug?: string; title?: string; goal?: string; editing?: boolean; shortLink?: string; monthly?: boolean };
 	error?: string;
 	notice?: string;
 }
 
 function pageRow(page: PageConfig): string {
 	const slug = escapeHtml(page.slug);
+	const monthly = cadenceOf(page) === "monthly";
+	const links = linkIdsOf(page).length;
+	const details = [
+		monthly ? "doação mensal" : "",
+		links > 1 ? `${links} links de pagamento` : "",
+		page.goalCents ? `meta ${formatReais(page.goalCents)}${monthly ? "/mês" : ""}` : "",
+	].filter(Boolean);
 	return `<li>
 	<div>
-		<a class="name" href="/${slug}" target="_blank" rel="noopener">${escapeHtml(page.title)}</a>
-		<span class="meta">doe.social/${slug}${page.goalCents ? ` · meta ${formatReais(page.goalCents)}` : ""}</span>
+		<a class="name" href="/${slug}/painel" target="_blank" rel="noopener">${escapeHtml(page.title)}</a>
+		<span class="meta">doe.social/${slug}/painel${details.length ? ` · ${details.join(" · ")}` : ""}</span>
 		<span class="meta">${page.shortLink ? `QR via ${escapeHtml(page.shortLink.replace(/^https?:\/\//, ""))}` : "QR direto para o Stripe (sem Dub)"}</span>
 	</div>
 	<a class="edit" href="/admin?editar=${slug}">Editar</a>
@@ -121,7 +128,7 @@ button.delete { background: #A3112B; }
 		<label>Título
 			<input name="title" required maxlength="80" placeholder="Festa do dia das crianças" value="${v(form.title)}">
 		</label>
-		<label>Meta <small>opcional</small>
+		<label>Meta <small>opcional${form.monthly ? ", em R$ por mês" : ""}</small>
 			<div class="prefix"><span>R$</span><input name="goal" inputmode="decimal" placeholder="30.000" value="${v(form.goal)}"></div>
 		</label>
 		<input type="hidden" name="editing" value="${form.editing ? "1" : ""}">

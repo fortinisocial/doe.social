@@ -1,7 +1,9 @@
 import { accessUser } from "./access";
-import { createDubLink, deleteDubLink, findDubLinkFor, findDubLinksFor, getDubLink, qrImageUrl } from "./dub";
+import { createDubLink, deleteDubLink, findDubLinkFor, findDubLinksFor, getDubLink } from "./dub";
 import {
+	cadenceOf,
 	getPage,
+	linkIdsOf,
 	listPages,
 	parseReais,
 	summarize,
@@ -9,7 +11,7 @@ import {
 	type PageConfig,
 	type Summary,
 } from "./pages";
-import { findPaymentLink, listDonations, paymentLinkCode } from "./stripe";
+import { findPaymentLink, listDonations, listMonthlyDonors, paymentLinkCode } from "./stripe";
 import { renderAdmin } from "./views/admin";
 import { escapeHtml } from "./views/shared";
 import { renderLive } from "./views/live";
@@ -22,6 +24,9 @@ function log(event: string, fields: Record<string, unknown> = {}): void {
 	console.log(JSON.stringify({ event, ...fields }));
 }
 
+// Panels, their data and /admin stay out of search engines and AI crawlers.
+const NO_INDEX = "noindex, nofollow, noarchive";
+
 function html(body: string, status = 200): Response {
 	return new Response(body, {
 		status,
@@ -29,10 +34,15 @@ function html(body: string, status = 200): Response {
 			"Content-Type": "text/html; charset=utf-8",
 			"Cache-Control": "no-store",
 			"X-Frame-Options": "DENY",
+			"X-Robots-Tag": NO_INDEX,
 			"Referrer-Policy": "strict-origin-when-cross-origin",
 			"Strict-Transport-Security": "max-age=31536000",
 		},
 	});
+}
+
+function json(body: unknown, status = 200): Response {
+	return Response.json(body, { status, headers: { "Cache-Control": "no-store", "X-Robots-Tag": NO_INDEX } });
 }
 
 async function cachedSummary(
@@ -40,12 +50,16 @@ async function cachedSummary(
 	ctx: ExecutionContext,
 	page: PageConfig,
 ): Promise<Summary> {
+	const cadence = cadenceOf(page);
+	const ids = linkIdsOf(page);
 	const cache = caches.default;
-	const cacheKey = new Request(`https://doe.social/__summary/${page.paymentLinkId}`);
+	const cacheKey = new Request(`https://doe.social/__summary/${cadence}/${ids.join(",")}`);
 	const hit = await cache.match(cacheKey);
 	if (hit) return hit.json();
 
-	const summary = summarize(await listDonations(env.STRIPE_API_KEY, page.paymentLinkId));
+	const list = cadence === "monthly" ? listMonthlyDonors : listDonations;
+	const perLink = await Promise.all(ids.map((id) => list(env.STRIPE_API_KEY, id)));
+	const summary = summarize(perLink.flat().sort((a, b) => b.paidAt - a.paidAt));
 	ctx.waitUntil(
 		cache.put(
 			cacheKey,
@@ -62,6 +76,13 @@ function qrTarget(page: PageConfig): string {
 	return page.shortLink ? `${page.shortLink}?qr=1` : page.paymentUrl;
 }
 
+/** A campaign can have its own donation page in public/<slug>/ (an ambassador's, say). */
+async function hasDonationPage(env: Env, slug: string): Promise<boolean> {
+	if (!env.ASSETS) return false;
+	const response = await env.ASSETS.fetch(new Request(`https://doe.social/${slug}/`, { method: "HEAD" }));
+	return response.ok;
+}
+
 async function handleLive(
 	env: Env,
 	ctx: ExecutionContext,
@@ -73,15 +94,13 @@ async function handleLive(
 
 	if (sub === "dados") {
 		try {
-			return Response.json(await cachedSummary(env, ctx, page), {
-				headers: { "Cache-Control": "no-store" },
-			});
+			return json(await cachedSummary(env, ctx, page));
 		} catch (error) {
 			log("summary_failed", { slug, error: String(error) });
-			return Response.json({ error: "unavailable" }, { status: 502 });
+			return json({ error: "unavailable" }, 502);
 		}
 	}
-	if (sub !== undefined && sub !== "demo") return Response.redirect(`https://doe.social/${slug}`, 302);
+	if (sub !== undefined && sub !== "demo" && sub !== "painel") return Response.redirect(`https://doe.social/${slug}`, 302);
 
 	let summary: Summary;
 	try {
@@ -91,12 +110,14 @@ async function handleLive(
 		log("summary_failed", { slug, error: String(error) });
 		summary = { totalCents: 0, count: 0, recent: [] };
 	}
+	// With its own donation page, the QR and the button lead there: it has every amount.
+	const donationPage = (await hasDonationPage(env, slug)) ? `https://doe.social/${slug}` : undefined;
 	return html(
 		renderLive({
 			page,
 			summary,
-			donateUrl: page.shortLink ?? page.paymentUrl,
-			qrUrl: qrImageUrl(qrTarget(page)),
+			donateUrl: donationPage ?? page.shortLink ?? page.paymentUrl,
+			qrTarget: donationPage ?? qrTarget(page),
 			demo: sub === "demo",
 		}),
 	);
@@ -229,6 +250,7 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 							goal: page.goalCents ? String(page.goalCents / 100) : "",
 							editing: true,
 							shortLink: page.shortLink,
+							monthly: cadenceOf(page) === "monthly",
 						}
 					: undefined,
 			}),

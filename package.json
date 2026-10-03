@@ -13,5 +13,8 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.1",
     "wrangler": "^4.136.3"
+  },
+  "dependencies": {
+    "uqr": "^0.1.3"
   }
 }

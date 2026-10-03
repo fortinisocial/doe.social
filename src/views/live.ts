@@ -1,4 +1,5 @@
-import { RECENT_LIMIT, type PageConfig, type Summary } from "../pages";
+import { cadenceOf, RECENT_LIMIT, type PageConfig, type Summary } from "../pages";
+import { qrSvg } from "../qr";
 import { escapeHtml, FONT_FACES, formatReais, HEAD_COMMON, TOKENS } from "./shared";
 
 // Canonical Fortini hexagon (DESIGN.md → hexagon-geometry).
@@ -22,33 +23,38 @@ interface LiveView {
 	page: PageConfig;
 	summary: Summary;
 	donateUrl: string;
-	qrUrl: string;
+	/** Where the QR leads; drawn inline by qrSvg. */
+	qrTarget: string;
 	/** Simulated donations in the browser, with a control panel. Never touches Stripe. */
 	demo?: boolean;
 }
 
-function countLabel(count: number): string {
+// A monthly campaign counts donors and R$ per month; a one-time one, gifts and a total.
+function countLabel(count: number, monthly: boolean): string {
+	if (monthly) return count === 1 ? "1 doador mensal" : `${count.toLocaleString("pt-BR")} doadores mensais`;
 	return count === 1 ? "1 doação" : `${count.toLocaleString("pt-BR")} doações`;
 }
 
-function goalBlock(page: PageConfig, totalCents: number): string {
+function goalBlock(page: PageConfig, totalCents: number, per: string): string {
 	// Always rendered so the demo panel can switch a goal on; hidden when unset.
 	const goal = page.goalCents ?? 0;
 	// The text tells the real percentage past the goal; only the bar stops at 100%.
 	const pct = goal ? Math.floor((totalCents / goal) * 100) : 0;
 	const reached = goal > 0 && totalCents >= goal;
-	const remaining = reached ? "Meta batida!" : `faltam <strong>${formatReais(goal - totalCents)}</strong>`;
+	const remaining = reached ? "Meta batida!" : `faltam <strong>${formatReais(goal - totalCents)}${per}</strong>`;
 	return `
 <div class="goal${reached ? " reached" : ""}" id="goal"${goal ? "" : " hidden"}>
 	<div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, pct)}" aria-valuetext="${pct}% da meta" aria-label="Progresso da meta">
 		<div class="fill" id="fill" style="--pct:${Math.min(100, pct)}%"></div>
 	</div>
-	<p class="goal-text"><span><strong id="pct">${pct}%</strong> da meta de <span id="goal-amount">${formatReais(goal)}</span></span><span class="remaining" id="remaining">${goal ? remaining : ""}</span></p>
+	<p class="goal-text"><span><strong id="pct">${pct}%</strong> da meta de <span id="goal-amount">${formatReais(goal)}${per}</span></span><span class="remaining" id="remaining">${goal ? remaining : ""}</span></p>
 </div>`;
 }
 
 // Demo only: fake donations generated in the browser, nothing reaches Stripe.
-const DEMO_PANEL = `
+// Monthly campaigns rehearse with monthly-sized amounts, not event gifts.
+function demoPanel(monthly: boolean): string {
+	return `
 <style>
 .demo {
 	position: fixed; right: 16px; bottom: 16px; z-index: 10;
@@ -114,14 +120,14 @@ const DEMO_PANEL = `
 <details class="demo" id="demo" open>
 	<summary><span class="title"><svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span class="label">Ajustes</span></span><kbd>D</kbd></summary>
 	<div class="body">
-		<label>Meta em R$ <small>vazio = sem meta</small>
+		<label>Meta em R$${monthly ? " por mês" : ""} <small>vazio = sem meta</small>
 			<input type="number" id="d-goal" min="0" step="100" placeholder="30000">
 		</label>
 		<label>Nova doação a cada <span id="d-every-label"></span>
 			<input type="range" id="d-every" min="1" max="30" value="4">
 		</label>
 		<label>Valores sorteados <small>separados por vírgula</small>
-			<input type="text" id="d-amounts" value="450, 450, 450, 900, 1350">
+			<input type="text" id="d-amounts" value="${monthly ? "50, 50, 100, 100, 200, 400" : "450, 450, 450, 900, 1350"}">
 		</label>
 		<div class="row">
 			<button type="button" class="primary" id="d-toggle">Pausar</button>
@@ -236,13 +242,17 @@ const DEMO_PANEL = `
 	schedule();
 })();
 </script>`;
+}
 
-export function renderLive({ page, summary, donateUrl, qrUrl, demo = false }: LiveView): string {
+export function renderLive({ page, summary, donateUrl, qrTarget, demo = false }: LiveView): string {
 	const title = escapeHtml(page.title);
 	const shortLabel = escapeHtml(donateUrl.replace(/^https?:\/\//, "").replace(/\?.*$/, ""));
+	const monthly = cadenceOf(page) === "monthly";
+	const per = monthly ? "/mês" : "";
 	const bootstrap = JSON.stringify({
 		slug: page.slug,
 		goalCents: page.goalCents ?? null,
+		monthly,
 		summary,
 	}).replace(/</g, "\\u003c");
 
@@ -251,7 +261,7 @@ export function renderLive({ page, summary, donateUrl, qrUrl, demo = false }: Li
 <head>
 ${HEAD_COMMON}
 <title>${demo ? "Demo · " : ""}${title} · Fortini</title>
-${demo ? '<meta name="robots" content="noindex">' : ""}
+<meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="theme-color" content="#24DBDD">
 <style>
 ${FONT_FACES}
@@ -302,6 +312,8 @@ body { overflow: hidden; }
 	white-space: nowrap;
 }
 .total .cur { font-size: 0.4em; letter-spacing: 0; margin-right: 0.12em; color: var(--teal); vertical-align: 0.9em; }
+/* "/mês" sits on the baseline after the figure, small, so the number still leads. */
+.total .per { font-size: 0.3em; letter-spacing: 0; margin-left: 0.08em; color: var(--teal); }
 /* The count reads as part of the figure — "R$ 17.550  32 doações" — sharing
    its baseline, and drops below only when the number needs the whole row. */
 .figure { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: clamp(16px, 2vw, 32px); row-gap: 8px; }
@@ -434,11 +446,10 @@ body { overflow: hidden; }
 }
 .hex { position: relative; width: min(28vw, 58vh); aspect-ratio: 175.205 / 194.264; }
 .hex svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.hex img {
-	position: absolute;
+.hex .qr {
+	inset: auto;
 	/* Largest square that clears the rounded corners of the hexagon. */
 	width: 62%; height: auto; aspect-ratio: 1; left: 19%; top: 50%; translate: 0 -50%;
-	image-rendering: pixelated;
 }
 .caption { display: grid; gap: clamp(8px, 1.5vh, 16px); }
 .invite p { margin: 0; text-wrap: balance; font-size: clamp(20px, 3vh, 34px); font-weight: 600; line-height: 1.2; }
@@ -492,16 +503,16 @@ body { overflow: hidden; }
 
 		<div class="total-block${page.goalCents && summary.totalCents >= page.goalCents ? " reached" : ""}">
 			<div class="figure">
-				<p class="total" id="total-line" aria-live="polite"><span class="cur">R$</span><span id="total">${formatReais(summary.totalCents).replace(/^R\$\s*/, "")}</span></p>
-				<p class="count" id="count-line"><strong id="count">${countLabel(summary.count)}</strong></p>
+				<p class="total" id="total-line" aria-live="polite"><span class="cur">R$</span><span id="total">${formatReais(summary.totalCents).replace(/^R\$\s*/, "")}</span>${monthly ? '<span class="per">/mês</span>' : ""}</p>
+				<p class="count" id="count-line"><strong id="count">${countLabel(summary.count, monthly)}</strong></p>
 				<span class="gain" id="gain" aria-hidden="true"></span>
 			</div>
-			${goalBlock(page, summary.totalCents)}
+			${goalBlock(page, summary.totalCents, per)}
 		</div>
 
-		<section class="recent" aria-label="Últimas doações">
-			<h2 id="recent-title" ${summary.count === 0 ? "hidden" : ""}>Últimas doações</h2>
-			${summary.count === 0 ? `<p class="empty" id="empty">A primeira doação aparece aqui assim que chegar.</p>` : ""}
+		<section class="recent" aria-label="${monthly ? "Novos doadores mensais" : "Últimas doações"}">
+			<h2 id="recent-title" ${summary.count === 0 ? "hidden" : ""}>${monthly ? "Novos doadores mensais" : "Últimas doações"}</h2>
+			${summary.count === 0 ? `<p class="empty" id="empty">${monthly ? "O primeiro doador mensal aparece aqui assim que chegar." : "A primeira doação aparece aqui assim que chegar."}</p>` : ""}
 			<ol id="recent"></ol>
 		</section>
 	</section>
@@ -510,7 +521,7 @@ body { overflow: hidden; }
 		${LATTICE}
 		<div class="hex">
 			<svg viewBox="${HEX_VIEWBOX}" aria-hidden="true"><path d="${HEX_PATH}" fill="#FBFBFB"/></svg>
-			<img src="${escapeHtml(qrUrl)}" alt="QR code para doar" width="800" height="800">
+			${qrSvg(qrTarget)}
 		</div>
 		<div class="caption">
 			<p>Aponte a câmera e doe</p>
@@ -542,7 +553,10 @@ function when(paidAt) {
 	if (day === dayKey.format(now - 86400000)) return "ontem, " + clock.format(at);
 	return dayMonth.format(at) + ", " + clock.format(at);
 }
-const countLabel = (n) => n === 1 ? "1 doação" : number.format(n) + " doações";
+const countLabel = (n) => state.monthly
+	? (n === 1 ? "1 doador mensal" : number.format(n) + " doadores mensais")
+	: (n === 1 ? "1 doação" : number.format(n) + " doações");
+const per = state.monthly ? "/mês" : "";
 
 // The total counts up from whatever is on screen, so a donation landing
 // mid-count retargets smoothly instead of jumping back.
@@ -621,8 +635,8 @@ function renderGoal(totalCents, prevCents) {
 	const reached = totalCents >= target;
 	$("fill").style.setProperty("--pct", Math.min(100, pct) + "%");
 	$("pct").textContent = number.format(pct) + "%";
-	$("goal-amount").textContent = reais(target);
-	$("remaining").innerHTML = reached ? "Meta batida!" : "faltam <strong>" + reais(target - totalCents) + "</strong>";
+	$("goal-amount").textContent = reais(target) + per;
+	$("remaining").innerHTML = reached ? "Meta batida!" : "faltam <strong>" + reais(target - totalCents) + per + "</strong>";
 	const bar = goal.querySelector("[role=progressbar]");
 	bar.setAttribute("aria-valuenow", Math.min(100, pct));
 	bar.setAttribute("aria-valuetext", pct + "% da meta");
@@ -935,7 +949,7 @@ async function keepAwake() {
 keepAwake();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) keepAwake(); });
 </script>
-${demo ? DEMO_PANEL : ""}
+${demo ? demoPanel(monthly) : ""}
 </body>
 </html>`;
 }

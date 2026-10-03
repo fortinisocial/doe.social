@@ -1,12 +1,20 @@
 import type { Donation } from "./stripe";
 
+/** One-time gifts add up to a total; monthly donors add up to R$ per month. */
+export type Cadence = "once" | "monthly";
+
 export interface PageConfig {
 	slug: string;
 	title: string;
-	/** Goal in cents; absent means no goal. */
+	/** Goal in cents (per month for a monthly campaign); absent means no goal. */
 	goalCents?: number;
+	/** Absent means "once": pages created before monthly campaigns existed. */
+	cadence?: Cadence;
+	/** The link the QR and the button lead to when there is no donation page. */
 	paymentLinkId: string;
 	paymentUrl: string;
+	/** Every payment link whose donations count; absent means just `paymentLinkId`. */
+	paymentLinkIds?: string[];
 	/** Dub short link; absent when Dub was unavailable, then the QR uses paymentUrl. */
 	shortLink?: string;
 	createdAt: string;
@@ -22,14 +30,18 @@ export interface Summary {
 
 export const RECENT_LIMIT = 12;
 
-// Paths the Worker or the static assets already own.
+export const cadenceOf = (page: PageConfig): Cadence => page.cadence ?? "once";
+export const linkIdsOf = (page: PageConfig): string[] => page.paymentLinkIds ?? [page.paymentLinkId];
+
+// Paths the Worker or the static assets already own. A campaign's own donation
+// page (public/<slug>/) is not here: it shares the slug with its campaign, and
+// the panel then lives at /<slug>/painel.
 const RESERVED = new Set([
 	"admin",
 	"api",
 	"fonts",
 	"img",
 	"redesoma",
-	"loucas-por-tennis",
 	"favicon.ico",
 	"robots.txt",
 	"site.webmanifest",

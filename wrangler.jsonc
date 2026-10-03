@@ -11,7 +11,7 @@
 	// One key per live page: slug -> PageConfig (see src/pages.ts).
 	"kv_namespaces": [{ "binding": "PAGES", "id": "aec227cee2764281b239af7fc71f2a23" }],
 	"secrets": {
-		"required": ["STRIPE_API_KEY", "DUB_API_KEY"]
+		"required": ["STRIPE_API_KEY", "STRIPE_ADMIN_KEY", "DUB_API_KEY"]
 	},
 	"vars": {
 		// Cloudflare Access app protecting /admin. The Worker re-checks the
@@ -22,6 +22,9 @@
 	}
 	// Secrets (wrangler secret put <NAME>):
 	//   STRIPE_API_KEY  rk_live_... restricted, read-only: Checkout Sessions,
-	//                   Payment Intents, Payment Links
+	//                   Payment Intents, Payment Links, Subscriptions
+	//   STRIPE_ADMIN_KEY rk_live_... restricted, write: Products, Prices,
+	//                   Payment Links. Used only by /admin, to create a
+	//                   campaign's product and links; public pages never see it.
 	//   DUB_API_KEY     dub_... workspace key, links read + write
 }

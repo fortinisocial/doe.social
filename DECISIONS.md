@@ -68,3 +68,9 @@ Resolves D8's pending point. A new restricted key with write on Products, Prices
 
 - **Why:** a leak or bug in a public panel can't create or change anything in Stripe.
 - **Rejected:** adding write permissions to the existing read-only key.
+
+## D12 · 2026-10-03 · Loucas por Tennis campaign live; no "Outro valor" or suggested amount yet
+
+Deployed as version 6da65d4e; the `loucas-por-tennis` campaign is in production KV (4 links, monthly, R$ 1.000/mês). The page subtitle no longer repeats "transformar vidas".
+
+- **Rejected for now:** an "Outro valor" button (Payment Links can't take a custom amount on recurring prices; the workaround is an R$ 10/mês link with adjustable quantity, to revisit once admin creates links); a "mais escolhido" badge (no donors yet, so it would be false).

@@ -1,1 +1,3 @@
 .DS_Store
+# Local A/B prototypes: served by a static server, never deployed.
+_prototypes

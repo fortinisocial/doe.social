@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Fortini Social + Embaixadoras Loucas por Tennis</title>
+<link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&text=%2B&display=block" />
+<link rel="preload" href="/fonts/neris-light.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="preload" href="/fonts/neris-semibold.woff2" as="font" type="font/woff2" crossorigin />
+<style>
+@font-face { font-family: Neris; src: url(/fonts/neris-light.woff2) format("woff2"); font-weight: 300; font-display: swap; }
+@font-face { font-family: Neris; src: url(/fonts/neris-semibold.woff2) format("woff2"); font-weight: 600; font-display: swap; }
+
+:root {
+	--teal: #1e7387;
+	--focus: rgb(30 115 135 / 0.7);
+	--teal-hover: #145566;
+	--teal-press: #0b3a46;
+	--ink: #111827;
+	--text: #374151;
+	--muted: #4b5563;
+	--note: #64748b;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { font-synthesis: none; -webkit-font-smoothing: antialiased; }
+body { margin: 0; background: #fff; color: var(--ink); font-family: Neris, Nunito, "Segoe UI", sans-serif; font-weight: 300; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+::selection { background: #c9f4f5; color: var(--ink); }
+h1, h2, p, figure { margin: 0; }
+
+.page { overflow-x: clip; padding: 2rem 0 4rem; }
+.wrap { margin: 0 auto; max-width: 42rem; padding: 0 1.5rem; }
+
+/* The invitation is named in text, not only in the logo's title attribute. */
+.brands { display: flex; align-items: center; gap: 0.875rem; }
+.brands a { display: block; border-radius: 0.25rem; }
+.brands img { display: block; width: auto; }
+.brands .fortini { height: 56px; }
+.brands .lt { height: 50px; }
+.brands .plus { color: var(--text); font-family: "Covered By Your Grace", cursive; font-size: 3.25rem; line-height: 1; }
+.who { margin-top: 0.75rem; color: var(--teal); font-size: 1rem; font-weight: 600; line-height: 1.5rem; }
+
+h1 { margin-top: 2rem; font-weight: 600; font-size: 2.25rem; line-height: 2.5rem; letter-spacing: -0.025em; text-wrap: balance; }
+.lead { margin-top: 1rem; max-width: 36rem; color: var(--text); font-size: 1.25rem; line-height: 2rem; text-wrap: pretty; }
+
+.grid { margin-top: 2.5rem; display: grid; grid-template-columns: 1fr; }
+h2 { font-weight: 600; font-size: 1.5rem; line-height: 2rem; letter-spacing: -0.025em; text-wrap: balance; }
+.about p { margin-top: 1rem; max-width: 65ch; color: var(--muted); font-size: 1.125rem; line-height: 1.875rem; text-wrap: pretty; }
+.about h2 + p { margin-top: 1.25rem; }
+
+/* Phones: one swipeable row, so the four photos cost one screen-third, not two screens. */
+.photos { margin-top: 2rem; }
+.strip {
+	display: grid; grid-auto-flow: column; grid-auto-columns: 72%; gap: 0.75rem;
+	margin: 0 -1.5rem; padding: 0.25rem 1.5rem 0.75rem;
+	overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 1.5rem;
+	scrollbar-width: none;
+}
+.strip::-webkit-scrollbar { display: none; }
+.photo {
+	display: block; scroll-snap-align: start; cursor: zoom-in;
+	aspect-ratio: 1; overflow: hidden; border-radius: 0.75rem;
+	box-shadow: 0 10px 20px -8px rgb(0 0 0 / 0.18);
+	outline: 1px solid rgb(0 0 0 / 0.1); outline-offset: -1px;
+}
+.photo:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 300ms ease-out; }
+@media (hover: hover) { .photo:hover img { transform: scale(1.04); } }
+.photos figcaption { margin-top: 0.25rem; color: var(--note); font-size: 0.875rem; line-height: 1.25rem; }
+
+.give { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.give h2 { font-size: 1.125rem; line-height: 1.75rem; letter-spacing: 0; }
+.amounts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.amounts a {
+	display: flex; align-items: center; justify-content: center;
+	min-height: 3.5rem; padding: 0 0.5rem;
+	border-radius: 0.375rem; background: var(--teal); color: #fff;
+	font-size: 1.125rem; font-weight: 600; text-decoration: none; white-space: nowrap;
+	box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.12), 0 1px 2px -1px rgb(0 0 0 / 0.12);
+	transition: background-color 150ms ease-out, box-shadow 150ms ease-out, transform 150ms ease-out;
+}
+@media (hover: hover) {
+	.amounts a:hover { background: var(--teal-hover); transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(30 115 135 / 0.35), 0 4px 6px -4px rgb(30 115 135 / 0.35); }
+}
+.amounts a:active { background: var(--teal-press); transform: translateY(0) scale(0.97); box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.3); transition-duration: 60ms; }
+.note { color: var(--note); font-size: 0.875rem; line-height: 1.25rem; }
+
+@media (min-width: 640px) {
+	.brands .fortini { height: 72px; }
+	.brands .lt { height: 64px; }
+	.brands .plus { font-size: 4rem; }
+	h1 { font-size: 3rem; line-height: 1; }
+	.lead { font-size: 1.375rem; line-height: 2.125rem; }
+	.strip { grid-auto-flow: row; grid-template-columns: repeat(4, 1fr); grid-auto-columns: auto; margin: 0; padding: 0 0 0.75rem; overflow: visible; }
+	.amounts { grid-template-columns: repeat(2, 13rem); }
+}
+@media (min-width: 1024px) {
+	.wrap { max-width: 80rem; padding: 0 2rem; }
+	.intro { max-width: 56rem; }
+	.grid { grid-template-columns: repeat(2, 1fr); column-gap: 2rem; row-gap: 2.5rem; }
+	.about { padding-right: 2rem; }
+	.photos { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; }
+	.strip { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+	/* Same stagger as the live page: the right column starts level with the headline. */
+	.strip .photo:nth-child(even) { margin-top: -10rem; }
+	.give { margin-top: 0; grid-column: 1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.amounts a, .photo img { transition: none; }
+	.amounts a:hover, .amounts a:active, .photo:hover img { transform: none; }
+}
+
+/* Lightbox, as on the live page. */
+html:has(.lightbox[open]) { overflow: hidden; }
+.lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: #fff; }
+.lightbox[open] { display: flex; align-items: center; justify-content: center; }
+.lightbox::backdrop { background: rgb(0 0 0 / 0.92); }
+.lightbox img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 8rem); width: auto; height: auto; border-radius: 0.5rem; }
+.lb-btn { position: absolute; display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: 50%; background: rgb(255 255 255 / 0.14); color: #fff; cursor: pointer; }
+.lb-btn svg { width: 1.5rem; height: 1.5rem; }
+.lb-close { top: 1rem; right: 1rem; }
+.lb-prev, .lb-next { bottom: 1.25rem; }
+.lb-prev { left: calc(50% - 4.5rem); }
+.lb-next { right: calc(50% - 4.5rem); }
+.lb-count { position: absolute; bottom: 2.1rem; left: 0; right: 0; text-align: center; font-size: 0.875rem; font-weight: 600; pointer-events: none; }
+@media (min-width: 768px) {
+	.lightbox img { max-width: calc(100vw - 10rem); max-height: calc(100dvh - 6rem); }
+	.lb-prev, .lb-next { bottom: auto; top: calc(50% - 1.5rem); }
+	.lb-prev { left: 1.5rem; }
+	.lb-next { right: 1.5rem; }
+	.lb-count { bottom: 1.25rem; }
+}
+</style>
+</head>
+<body>
+<main class="page">
+	<div class="wrap">
+		<div class="brands">
+			<a href="https://fortini.org.br" title="Fortini Social: 10 anos transformando vidas"><img class="fortini" src="/loucas-por-tennis/img/fortini-10-anos.webp" alt="Fortini Social, 10 anos transformando vidas" width="179" height="72" /></a>
+			<span class="plus" aria-hidden="true">+</span>
+			<a href="https://www.instagram.com/loucasportennis/" target="_blank" rel="noopener" title="Embaixadoras Loucas por Tennis"><img class="lt" src="/loucas-por-tennis/img/loucas-por-tennis.webp" alt="Loucas por Tennis no Instagram" width="68" height="64" /></a>
+		</div>
+		<p class="who">Embaixadoras Loucas por Tennis</p>
+
+		<div class="intro">
+			<h1>Ajude a transformar vidas</h1>
+			<p class="lead">Educação integral, esporte e cultura para ampliar as oportunidades de crianças e adolescentes.</p>
+		</div>
+
+		<section class="grid">
+			<div class="about">
+				<h2>Por que doar para a Fortini?</h2>
+				<p>Mais de mil crianças e adolescentes participam dos projetos da Fortini em 6 municípios.</p>
+				<p>Leis de incentivo e editais financiam esses projetos, mas não a manutenção da instituição. Sua doação mensal ajuda a manter a Fortini e dar continuidade à sua missão.</p>
+			</div>
+
+			<figure class="photos">
+				<div class="strip">
+					<a class="photo" href="/loucas-por-tennis/img/full/embaixadoras.webp"><img src="/loucas-por-tennis/img/embaixadoras.webp" alt="As Loucas por Tennis sentadas com uma aluna que segura uma raquete" width="1000" height="1000" /></a>
+					<a class="photo" href="/loucas-por-tennis/img/full/tenis.webp"><img src="/loucas-por-tennis/img/tenis.webp" alt="Turma de tênis da Fortini reunida na quadra" width="1000" height="1000" /></a>
+					<a class="photo" href="/loucas-por-tennis/img/full/judo.webp"><img src="/loucas-por-tennis/img/judo.webp" alt="Alunas de judô de quimono com as Loucas por Tennis" width="1000" height="1000" loading="lazy" /></a>
+					<a class="photo" href="/loucas-por-tennis/img/full/beach-tennis.webp"><img src="/loucas-por-tennis/img/beach-tennis.webp" alt="Turma de beach tennis na areia com raquetes" width="1000" height="1000" loading="lazy" /></a>
+				</div>
+				<figcaption>Nossa visita às oficinas da Fortini.</figcaption>
+			</figure>
+
+			<div class="give">
+				<h2>Escolha sua doação mensal</h2>
+				<div class="amounts">
+					<a href="https://donate.stripe.com/dRm9ATakbe2DaseaK7e7m0I" target="_blank" rel="noopener">Doar R$ 50/mês</a>
+					<a href="https://donate.stripe.com/eVqaEX0JBbUvcAm6tRe7m0K" target="_blank" rel="noopener">Doar R$ 100/mês</a>
+					<a href="https://donate.stripe.com/4gMaEXbofaQrasebObe7m0L" target="_blank" rel="noopener">Doar R$ 200/mês</a>
+					<a href="https://donate.stripe.com/aFaeVd4ZR7EfeIu4lJe7m0J" target="_blank" rel="noopener">Doar R$ 400/mês</a>
+				</div>
+				<p class="note">Você pode cancelar a qualquer momento.</p>
+			</div>
+		</section>
+	</div>
+</main>
+
+<dialog class="lightbox" aria-label="Fotos">
+	<button class="lb-btn lb-close" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+	<img alt="" />
+	<button class="lb-btn lb-prev" type="button" aria-label="Foto anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg></button>
+	<button class="lb-btn lb-next" type="button" aria-label="Próxima foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></button>
+	<p class="lb-count" aria-live="polite"></p>
+</dialog>
+
+<script>
+const photos = [...document.querySelectorAll(".photo")];
+const box = document.querySelector(".lightbox");
+const big = box.querySelector("img");
+const count = box.querySelector(".lb-count");
+let current = 0;
+function show(index) {
+	current = (index + photos.length) % photos.length;
+	big.src = photos[current].href;
+	big.alt = photos[current].querySelector("img").alt;
+	count.textContent = `${current + 1} / ${photos.length}`;
+}
+photos.forEach((link, index) =>
+	link.addEventListener("click", (event) => {
+		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+		event.preventDefault();
+		show(index);
+		box.showModal();
+	}),
+);
+box.querySelector(".lb-close").addEventListener("click", () => box.close());
+box.querySelector(".lb-prev").addEventListener("click", () => show(current - 1));
+box.querySelector(".lb-next").addEventListener("click", () => show(current + 1));
+box.addEventListener("click", (event) => { if (event.target === box) box.close(); });
+box.addEventListener("keydown", (event) => {
+	if (event.key === "ArrowLeft") show(current - 1);
+	if (event.key === "ArrowRight") show(current + 1);
+});
+</script>
+</body>
+</html>

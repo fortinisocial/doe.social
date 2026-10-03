@@ -16,6 +16,8 @@
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<!-- Hand-drawn "+" between the logos; text=%2B fetches that one glyph only. -->
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Covered+By+Your+Grace&text=%2B&display=block" />
+		<!-- Light carries the lead and every paragraph; semibold the headings and buttons. -->
+		<link rel="preload" href="/fonts/neris-light.woff2" as="font" type="font/woff2" crossorigin />
 		<link rel="preload" href="/fonts/neris-semibold.woff2" as="font" type="font/woff2" crossorigin />
 		<style>
 			/* Neris ships only 300 / 600 / 900 — never ask for 400 or 700. */
@@ -44,6 +46,7 @@
 				font-weight: 300;
 			}
 			:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+			::selection { background: #c9f4f5; color: var(--ink); }
 			h1, h2, p { margin: 0; }
 
 			/* Photos bleed past the gutter on tablets; clip them here. */
@@ -67,13 +70,14 @@
 				font-size: 2.25rem;
 				line-height: 2.5rem;
 				letter-spacing: -0.025em;
-				text-wrap: pretty;
+				text-wrap: balance;
 			}
-			.lead { margin-top: 1.5rem; color: var(--text); font-size: 1.25rem; line-height: 2rem; text-wrap: balance; }
+			/* The lead is the page's promise: a clear step above the 18px body, held to two balanced lines. */
+			.lead { margin-top: 1.5rem; max-width: 36rem; color: var(--text); font-size: 1.25rem; line-height: 2rem; text-wrap: balance; }
 
 			.grid { margin-top: 3rem; display: grid; grid-template-columns: 1fr; }
-			h2 { font-weight: 600; font-size: 1.5rem; line-height: 2rem; letter-spacing: -0.025em; }
-			.about p { margin-top: 1.5rem; color: var(--muted); font-size: 1.125rem; line-height: 1.875rem; }
+			h2 { font-weight: 600; font-size: 1.5rem; line-height: 2rem; letter-spacing: -0.025em; text-wrap: balance; }
+			.about p { margin-top: 1.5rem; max-width: 65ch; color: var(--muted); font-size: 1.125rem; line-height: 1.875rem; text-wrap: pretty; }
 			.about p + p { margin-top: 1rem; }
 
 			.photos { padding-top: 4rem; }
@@ -191,6 +195,7 @@
 				.brands .lt { height: 75px; }
 				.brands .plus { font-size: 4.75rem; }
 				h1 { font-size: 3rem; line-height: 1; }
+				.lead { font-size: 1.375rem; line-height: 2.125rem; }
 				.photos-grid { margin: 0 -4rem; grid-template-columns: repeat(4, 1fr); }
 			}
 			@media (min-width: 768px) {
@@ -232,25 +237,19 @@
 				</div>
 				<div class="intro">
 					<h1>Ajude a transformar vidas</h1>
-					<p class="lead">Você pode ajudar a transformar vidas através de doações recorrentes para a Fortini Social.</p>
+					<p class="lead">Com uma doação mensal, você ajuda a manter a Fortini&nbsp;Social de portas abertas.</p>
 				</div>
 				<section class="grid">
 					<div class="about">
 						<h2>Por que doar para a Fortini?</h2>
 						<p>
-							Hoje, mais de mil crianças e adolescentes em 6 municípios participam dos projetos da Fortini. Com
-							oficinas esportivas, culturais e de desenvolvimento socioemocional, trabalhamos o desenvolvimento
-							educacional junto com o social, para melhorar o desempenho físico e escolar e fortalecer a
-							autoestima de cada participante.
+							Mais de mil crianças e adolescentes em 6 municípios participam dos projetos da Fortini, com
+							oficinas esportivas, culturais e socioemocionais.
 						</p>
 						<p>
-							Os projetos são realizados por meio das leis de incentivo fiscal, mas esses recursos não podem
-							manter a instituição. Sua doação mensal garante a estrutura que torna cada projeto possível.
-						</p>
-						<p>
-							É ela que sustenta a sede, a prestação de contas e a criação de novos projetos. Sem a instituição
-							de pé, nenhum projeto acontece. Com sua ajuda, a Fortini segue de portas abertas para continuar
-							transformando a vida dessas crianças e adolescentes.
+							Os projetos são financiados por leis de incentivo fiscal, mas esses recursos só podem ser usados
+							nos próprios projetos, não na manutenção da instituição. Sua doação mensal garante a estrutura
+							que torna cada projeto possível.
 						</p>
 					</div>
 					<div class="photos">

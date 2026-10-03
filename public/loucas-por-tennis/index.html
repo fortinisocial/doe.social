@@ -24,6 +24,8 @@
 
 			:root {
 				--teal: #1e7387;
+				/* Teal at 70%: the lightest that still keeps 3:1 against white (WCAG non-text contrast). */
+				--focus: rgb(30 115 135 / 0.7);
 				/* Each state a clear step darker, so rest / hover / press read apart. */
 				--teal-hover: #145566;
 				--teal-press: #0b3a46;
@@ -41,7 +43,7 @@
 				font-family: Neris, Nunito, "Segoe UI", sans-serif;
 				font-weight: 300;
 			}
-			:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+			:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 			h1, h2, p { margin: 0; }
 
 			/* Photos bleed past the gutter on tablets; clip them here. */
@@ -87,6 +89,8 @@
 				outline-offset: -1px;
 			}
 			.photo:nth-child(even) { margin-top: -2rem; }
+			/* .photo uses outline for its hairline edge, which would otherwise hide the focus ring. */
+			.photo:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 			.photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 300ms ease-out; }
 			@media (hover: hover) { .photo:hover img { transform: scale(1.04); } }
 
@@ -130,7 +134,7 @@
 				cursor: pointer;
 				transition: background-color 150ms ease-out;
 			}
-			.lb-btn:focus-visible { outline-color: #fff; }
+			.lb-btn:focus-visible { outline-color: rgb(255 255 255 / 0.7); }
 			@media (hover: hover) { .lb-btn:hover { background: rgb(255 255 255 / 0.28); } }
 			.lb-btn svg { width: 1.5rem; height: 1.5rem; }
 			.lb-close { top: 1rem; right: 1rem; }

@@ -74,3 +74,40 @@ Resolves D8's pending point. A new restricted key with write on Products, Prices
 Deployed as version 6da65d4e; the `loucas-por-tennis` campaign is in production KV (4 links, monthly, R$ 1.000/mês). The page subtitle no longer repeats "transformar vidas".
 
 - **Rejected for now:** an "Outro valor" button (Payment Links can't take a custom amount on recurring prices; the workaround is an R$ 10/mês link with adjustable quantity, to revisit once admin creates links); a "mais escolhido" badge (no donors yet, so it would be false).
+
+## D13 · 2026-10-03 · Ambassador page layout: A/B pending between two external suggestions
+
+Local picker at `public/_prototypes/loucas-ab/` (ignored on deploy via `.assetsignore`):
+- **A · Convite**: an "Um convite das …" line, the main photo first, a cause-led headline, transparency before the buttons, R$ 50/100/200/400 with "sugerido" on R$ 50, a one-time exit, a trust line, a footer with the CNPJ, and a sticky "Doar todo mês" bar on phones.
+- **B · Causa**: the current page tightened. The name is visible next to the logos, the subtitle is about the cause, the transparency text is shorter, photos sit in a swipe strip on phones, and buttons read "Doar R$ 50/mês". Nothing new is added.
+
+The skill took the points both agree on (copy rules, agreement-safe name fields, WhatsApp card, attribution, checkout check). The layout itself waits on the user's pick.
+
+## D14 · 2026-10-03 · Ambassador pages follow variant A ("Convite"), adjusted
+
+`public/loucas-por-tennis/` is now A, with three changes from the user: the headline is just "Ajude a transformar vidas"; the main photo is the tennis class on the court in Belo Horizonte; and the "Por que doar para a Fortini?" text says what the money really pays for (incentive laws and grants pay the workshops and the team; monthly gifts pay the office: energy, internet, maintenance). The amounts are R$ 50/100/200/400 with "sugerido" on R$ 50. The page's facts were checked against `fortini-astro/src/data/fortini.json`. The A/B stays at `public/_prototypes/loucas-ab/` ("No ar", the original A, B) for further comparison, excluded from deploys by `.assetsignore`.
+
+- **Rejected:** B ("Causa"). It's leaner, but the invitation from someone you know and the photo up front carry more weight on a link shared over WhatsApp.
+
+## D15 · 2026-10-03 · Recurring donations are card only
+
+The page says "Cartão de crédito". The four Loucas links currently offer card, boleto and Apple Pay (Apple Pay counts as card); restricting them to card is a live Stripe change waiting on the user's OK.
+
+## D16 · 2026-10-03 · Hotfix: the live subtitle leads with the cause
+
+Deployed as version 7f15b6cc, commit a9974f9 (not pushed). Before the A page ships, the live page's subtitle "Com uma doação mensal, você ajuda a manter a Fortini Social de portas abertas" became "Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas da Grande BH." It has no numbers, because the paragraph below already says "mais de mil… 6 municípios".
+
+- **Why:** "portas abertas" pitched the institution's survival rather than the cause.
+- **"Finalista do Prêmio Melhores ONGs 2025" stays:** Fortini passed the first phase and competed in the second, final one.
+
+## D17 · 2026-10-03 · Panels stay on a public link, hidden from bots
+
+Anyone with `doe.social/<slug>/painel` can open it; no password or secret link. Search engines and AI crawlers stay out through what D10 already shipped: `X-Robots-Tag: noindex, nofollow, noarchive` plus the meta tag on every Worker page, `Disallow: /*/painel` and `/*/dados` for all agents, and a site-wide `Disallow: /` for the AI crawlers in `robots.txt`. Checked in production: `/loucas-por-tennis/painel` sends the header.
+
+- **Why:** ambassadors share the panel themselves; a password adds friction and protects numbers that aren't sensitive.
+- **Rejected:** password per campaign; secret link per campaign (for now).
+- **Later:** a dynamic OG image for each panel that shows the current total, so a shared link previews progress. Not started.
+
+## D18 · 2026-10-03 · "Finalista do Prêmio Melhores ONGs 2025" links to the MG first-phase result
+
+The trust line now links to https://premiomelhores.org/resultado-minas-gerais, the only public proof found. It lists "Fortini Investimento Social" among the MG organizations "que seguem para a segunda fase"; per D16, the second phase is the final one. The page itself never says "finalista".

@@ -29,7 +29,7 @@ const RESERVED = new Set([
 	"fonts",
 	"img",
 	"redesoma",
-	"loucas-por-tenis",
+	"loucas-por-tennis",
 	"favicon.ico",
 	"robots.txt",
 	"site.webmanifest",

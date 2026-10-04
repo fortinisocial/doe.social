@@ -8,6 +8,9 @@
 	// old /redesoma page) are served first; any other path reaches the Worker.
 	"routes": [{ "pattern": "doe.social/*", "zone_name": "doe.social" }],
 	"assets": { "directory": "public", "binding": "ASSETS" },
+	// Browser code is TypeScript in src/client/; this compiles it to public/js/ before
+	// every `wrangler dev` and `wrangler deploy`. public/js/ is not committed.
+	"build": { "command": "./node_modules/.bin/tsc -p src/client" },
 	// One key per live page: slug -> PageConfig (see src/pages.ts).
 	"kv_namespaces": [{ "binding": "PAGES", "id": "aec227cee2764281b239af7fc71f2a23" }],
 	"secrets": {

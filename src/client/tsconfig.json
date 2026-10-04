@@ -1,0 +1,13 @@
+// Browser code: compiled to public/js/ by `tsc -p src/client` (wrangler's build step runs it).
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "types": [],
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "../../public/js"
+  },
+  "include": ["."],
+  "exclude": []
+}

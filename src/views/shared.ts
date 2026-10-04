@@ -59,5 +59,6 @@ export const HEAD_COMMON = `
 <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32x32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 <link rel="preload" href="/fonts/neris-black.woff2" as="font" type="font/woff2" crossorigin>
 `;

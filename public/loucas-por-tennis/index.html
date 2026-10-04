@@ -59,8 +59,15 @@ a { color: var(--teal); }
 
 .hero { margin-top: 0.75rem; }
 .hero a { display: block; border-radius: 0.75rem; overflow: hidden; cursor: zoom-in; outline: 1px solid rgb(0 0 0 / 0.08); outline-offset: -1px; }
-.hero img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
-.hero figcaption { margin-top: 0.5rem; color: var(--note); font-size: 0.875rem; line-height: 1.25rem; }
+/* A 3:2 crop tight on the group (img/tenis-hero.webp); the lightbox opens the uncropped photo. */
+.hero img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+/* Every photo names its workshop, so the main caption never reads as the whole gallery's. */
+.gallery figcaption { margin-top: 0.375rem; color: var(--note); font-size: 0.875rem; line-height: 1.25rem; }
+.more figcaption { font-size: 0.8125rem; line-height: 1.125rem; }
+/* The city only fits on one line when the row is wide; the lightbox always shows the full caption. */
+.more { container-type: inline-size; }
+.more .where { display: none; }
+@container (min-width: 500px) { .more .where { display: inline; } }
 
 h1 { margin-top: 1.5rem; font-weight: 600; font-size: 2rem; line-height: 2.375rem; letter-spacing: -0.025em; text-wrap: balance; }
 .lead { margin-top: 0.875rem; color: var(--text); font-size: 1.125rem; line-height: 1.75rem; text-wrap: pretty; }
@@ -98,8 +105,12 @@ h2 { font-weight: 600; font-size: 1.25rem; line-height: 1.75rem; letter-spacing:
 .amounts a.suggested:active { background: var(--teal-press); }
 
 .micro { margin-top: 0.75rem; color: var(--note); font-size: 0.875rem; line-height: 1.25rem; text-align: center; }
+.micro span { white-space: nowrap; }
 .once { margin-top: 1.25rem; font-size: 1rem; line-height: 1.5rem; text-align: center; }
-.once a { font-weight: 600; text-underline-offset: 0.2em; }
+/* The link wraps as a unit, onto its own line, never mid-phrase. */
+.once a { display: inline-block; font-weight: 600; text-underline-offset: 0.2em; transition: color 150ms ease-out; }
+@media (hover: hover) { .once a:hover { color: var(--teal-hover); } }
+.once a:active { color: var(--teal-press); }
 .trust { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.875rem; line-height: 1.375rem; text-align: center; text-wrap: balance; }
 /* Each credential stays whole when the line wraps. */
 .trust span { white-space: nowrap; }
@@ -107,7 +118,8 @@ h2 { font-weight: 600; font-size: 1.25rem; line-height: 1.75rem; letter-spacing:
 .trust a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
 @media (hover: hover) { .trust a:hover { color: var(--teal); } }
 
-.more { margin-top: 0.75rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+/* A caption hugs its own photo; the gap to the next row is wider, so the main caption never reads as the thumbnails'. */
+.more { margin-top: 1.25rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 .more a { display: block; border-radius: 0.5rem; overflow: hidden; cursor: zoom-in; outline: 1px solid rgb(0 0 0 / 0.08); outline-offset: -1px; }
 .more img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; transition: transform 300ms ease-out; }
 @media (hover: hover) { .more a:hover img, .hero a:hover img { transform: scale(1.03); } .hero img { transition: transform 300ms ease-out; } }
@@ -115,7 +127,7 @@ h2 { font-weight: 600; font-size: 1.25rem; line-height: 1.75rem; letter-spacing:
 footer { margin-top: 2.5rem; color: var(--note); font-size: 0.8125rem; line-height: 1.375rem; text-align: center; }
 footer a { color: inherit; }
 
-/* Phones: a bar that jumps to the amounts, gone once they are on screen. */
+/* Phones: a bar that jumps to the amounts. It waits until the reason to give (the lead) has been read, and leaves once the amounts are on screen. */
 .sticky {
 	position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
 	padding: 0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom));
@@ -123,7 +135,7 @@ footer a { color: inherit; }
 	box-shadow: 0 -1px 0 var(--line);
 	transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1), opacity 200ms ease-out;
 }
-.sticky a { display: flex; align-items: center; justify-content: center; height: 3.25rem; border-radius: 0.5rem; background: var(--teal); color: #fff; font-size: 1.125rem; font-weight: 600; text-decoration: none; }
+.sticky a { display: flex; max-width: 33.5rem; margin: 0 auto; align-items: center; justify-content: center; height: 3.25rem; border-radius: 0.5rem; background: var(--teal); color: #fff; font-size: 1.125rem; font-weight: 600; text-decoration: none; }
 .sticky a:active { background: var(--teal-press); }
 .sticky[data-hidden] { transform: translateY(110%); opacity: 0; pointer-events: none; }
 
@@ -136,7 +148,7 @@ footer a { color: inherit; }
 	.brands .plus { font-size: 4rem; }
 	.text { grid-column: 1; grid-row: 2; }
 	.visuals { grid-column: 2; grid-row: 2; padding-top: 2.25rem; }
-	.more { margin-top: 1.25rem; gap: 0.75rem; }
+	.more { margin-top: 1.5rem; gap: 0.75rem; }
 	h1 { font-size: 2.75rem; line-height: 3.125rem; }
 	.lead { font-size: 1.25rem; line-height: 2rem; }
 	.amounts { grid-template-columns: repeat(2, minmax(0, 13rem)); }
@@ -155,7 +167,10 @@ html:has(.lightbox[open]) { overflow: hidden; }
 .lightbox { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: #fff; }
 .lightbox[open] { display: flex; align-items: center; justify-content: center; }
 .lightbox::backdrop { background: rgb(0 0 0 / 0.92); }
-.lightbox img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 8rem); width: auto; height: auto; border-radius: 0.5rem; }
+.lb-figure { display: flex; flex-direction: column; align-items: center; }
+.lightbox img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 10rem); width: auto; height: auto; border-radius: 0.5rem; }
+/* The same workshop label as on the page, under the photo. */
+.lb-caption { margin-top: 0.75rem; padding: 0 1rem; color: rgb(255 255 255 / 0.88); font-size: 0.9375rem; line-height: 1.375rem; text-align: center; text-wrap: balance; }
 .lb-btn { position: absolute; display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: 50%; background: rgb(255 255 255 / 0.14); color: #fff; cursor: pointer; }
 .lb-btn svg { width: 1.5rem; height: 1.5rem; }
 .lb-close { top: 1rem; right: 1rem; }
@@ -164,7 +179,7 @@ html:has(.lightbox[open]) { overflow: hidden; }
 .lb-next { right: calc(50% - 4.5rem); }
 .lb-count { position: absolute; bottom: 2.1rem; left: 0; right: 0; text-align: center; font-size: 0.875rem; font-weight: 600; pointer-events: none; }
 @media (min-width: 768px) {
-	.lightbox img { max-width: calc(100vw - 10rem); max-height: calc(100dvh - 6rem); }
+	.lightbox img { max-width: calc(100vw - 10rem); max-height: calc(100dvh - 8.5rem); }
 	.lb-prev, .lb-next { bottom: auto; top: calc(50% - 1.5rem); }
 	.lb-prev { left: 1.5rem; }
 	.lb-next { right: 1.5rem; }
@@ -176,9 +191,9 @@ html:has(.lightbox[open]) { overflow: hidden; }
 <main class="page">
 	<div class="wrap">
 		<div class="brands">
-			<a href="https://fortini.org.br" title="Fortini Social: 10 anos transformando vidas"><img class="fortini" src="img/fortini-10-anos.webp" alt="Fortini Social, 10 anos transformando vidas" width="179" height="72" /></a>
+			<a href="https://fortini.org.br?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=header-logo" title="Fortini Social: 10 anos transformando vidas"><img class="fortini" src="img/fortini-10-anos.webp" alt="Fortini Social, 10 anos transformando vidas" width="179" height="72" /></a>
 			<span class="plus" aria-hidden="true">+</span>
-			<a href="https://www.instagram.com/loucasportennis/" target="_blank" rel="noopener" title="Loucas por Tennis"><img class="lt" src="img/loucas-por-tennis.webp" alt="Loucas por Tennis no Instagram" width="68" height="64" /></a>
+			<a href="https://www.instagram.com/loucasportennis/?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=header-ambassador" target="_blank" rel="noopener" title="Loucas por Tennis"><img class="lt" src="img/loucas-por-tennis.webp" alt="Loucas por Tennis no Instagram" width="68" height="64" /></a>
 		</div>
 
 		<div class="text">
@@ -186,13 +201,13 @@ html:has(.lightbox[open]) { overflow: hidden; }
 
 			<div class="gallery" id="gallery">
 				<figure class="hero">
-					<a class="photo" href="img/full/tenis.webp"><img src="img/full/tenis.webp" alt="As Loucas por Tennis com a turma de tênis da Fortini na quadra" width="1600" height="1200" /></a>
-					<figcaption>Loucas por Tennis na oficina de tênis em Belo Horizonte</figcaption>
+					<a class="photo" href="img/full/tenis.webp"><img src="img/tenis-hero.webp" alt="As Loucas por Tennis com a turma de tênis da Fortini na quadra" width="1200" height="800" /></a>
+					<figcaption>Oficina de Tênis em Belo Horizonte</figcaption>
 				</figure>
 				<div class="more">
-					<a class="photo" href="img/full/embaixadoras.webp"><img src="img/embaixadoras.webp" alt="As Loucas por Tennis sentadas com uma aluna que segura uma raquete" width="1000" height="1000" loading="lazy" /></a>
-					<a class="photo" href="img/full/judo.webp"><img src="img/judo.webp" alt="Alunas de judô de quimono com as Loucas por Tennis" width="1000" height="1000" loading="lazy" /></a>
-					<a class="photo" href="img/full/beach-tennis.webp"><img src="img/beach-tennis.webp" alt="Turma de beach tennis na areia com raquetes" width="1000" height="1000" loading="lazy" /></a>
+					<figure><a class="photo" href="img/full/embaixadoras.webp"><img src="img/embaixadoras.webp" alt="As Loucas por Tennis sentadas com uma aluna da oficina de percussão, que segura baquetas e uma raquete" width="1000" height="1000" loading="lazy" /></a><figcaption>Percussão<span class="where"> em Contagem</span></figcaption></figure>
+					<figure><a class="photo" href="img/full/judo.webp"><img src="img/judo.webp" alt="Alunas de judô de quimono com as Loucas por Tennis" width="1000" height="1000" loading="lazy" /></a><figcaption>Judô<span class="where"> em Contagem</span></figcaption></figure>
+					<figure><a class="photo" href="img/full/beach-tennis.webp"><img src="img/beach-tennis.webp" alt="Turma de beach tennis na areia com raquetes" width="1000" height="1000" loading="lazy" /></a><figcaption>Beach Tennis<span class="where"> em Contagem</span></figcaption></figure>
 				</div>
 			</div>
 
@@ -206,14 +221,14 @@ html:has(.lightbox[open]) { overflow: hidden; }
 
 			<section class="give" id="valores" aria-label="Doação mensal">
 				<div class="amounts">
-					<a class="suggested" href="https://donate.stripe.com/dRm9ATakbe2DaseaK7e7m0I" target="_blank" rel="noopener"><span class="badge">sugerido</span>R$ 50<small>/mês</small></a>
-					<a href="https://donate.stripe.com/eVqaEX0JBbUvcAm6tRe7m0K" target="_blank" rel="noopener">R$ 100<small>/mês</small></a>
-					<a href="https://donate.stripe.com/4gMaEXbofaQrasebObe7m0L" target="_blank" rel="noopener">R$ 200<small>/mês</small></a>
-					<a href="https://donate.stripe.com/aFaeVd4ZR7EfeIu4lJe7m0J" target="_blank" rel="noopener">R$ 400<small>/mês</small></a>
+					<a class="suggested" href="https://donate.stripe.com/dRm9ATakbe2DaseaK7e7m0I?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-50" target="_blank" rel="noopener"><span class="badge">sugerido</span>R$ 50<small>/mês</small></a>
+					<a href="https://donate.stripe.com/eVqaEX0JBbUvcAm6tRe7m0K?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-100" target="_blank" rel="noopener">R$ 100<small>/mês</small></a>
+					<a href="https://donate.stripe.com/4gMaEXbofaQrasebObe7m0L?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-200" target="_blank" rel="noopener">R$ 200<small>/mês</small></a>
+					<a href="https://donate.stripe.com/aFaeVd4ZR7EfeIu4lJe7m0J?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-400" target="_blank" rel="noopener">R$ 400<small>/mês</small></a>
 				</div>
-				<p class="micro">Cartão de crédito · pagamento seguro via Stripe · cancele quando quiser</p>
-				<p class="once">Prefere doar uma vez? <a href="https://fortini.org.br/doe?ref=loucas-por-tennis" target="_blank" rel="noopener">Escolha qualquer valor →</a></p>
-				<p class="trust"><span>10 anos</span> · <span><a href="https://selodoar.org/certificado-fortini-investimento-social/" target="_blank" rel="noopener">Selo Doar</a></span> · <span><a href="https://www.otempo.com.br/sports/especializados/2024/12/16/ong-e-destaque-no-premio-do-esporte-mineiro-2024-saiba-os-detalhes" target="_blank" rel="noopener">1º lugar no Prêmio do Esporte Mineiro 2024</a></span> · <span><a href="https://premiomelhores.org/resultado-minas-gerais" target="_blank" rel="noopener">Finalista do Prêmio Melhores ONGs 2025</a></span></p>
+				<p class="micro"><span>Cartão de crédito</span> · <span>pagamento seguro via Stripe</span> · <span>cancele quando quiser</span></p>
+				<p class="once">Quer fazer uma doação única? <a href="https://donate.stripe.com/cNi14n4ZRgaLbwi8BZe7m0M?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=one-time" target="_blank" rel="noopener">Clique aqui e escolha o valor</a></p>
+				<p class="trust"><span>10 anos</span> · <span><a href="https://selodoar.org/certificado-fortini-investimento-social/?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-selo-doar" target="_blank" rel="noopener">Selo Doar</a></span> · <span><a href="https://www.otempo.com.br/sports/especializados/2024/12/16/ong-e-destaque-no-premio-do-esporte-mineiro-2024-saiba-os-detalhes?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-esporte-mineiro" target="_blank" rel="noopener">1º lugar no Prêmio do Esporte Mineiro 2024</a></span> · <span><a href="https://premiomelhores.org/resultado-minas-gerais?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-melhores-ongs" target="_blank" rel="noopener">Finalista do Prêmio Melhores ONGs 2025</a></span></p>
 			</section>
 		</div>
 
@@ -221,73 +236,23 @@ html:has(.lightbox[open]) { overflow: hidden; }
 
 		<footer>
 			Fortini Investimento Social · CNPJ 26.628.632/0001-98 ·
-			<a href="https://fortini.org.br" target="_blank" rel="noopener">fortini.org.br</a> ·
-			<a href="https://www.instagram.com/fortinisocial/" target="_blank" rel="noopener">@fortinisocial</a>
+			<a href="https://fortini.org.br?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=footer-site" target="_blank" rel="noopener">fortini.org.br</a> ·
+			<a href="https://www.instagram.com/fortinisocial/?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=footer-instagram" target="_blank" rel="noopener">@fortinisocial</a>
 		</footer>
 	</div>
 </main>
 
-<div class="sticky" id="sticky"><a href="#valores">Doar todo mês</a></div>
+<div class="sticky" id="sticky" data-hidden><a href="#valores">Doar todo mês</a></div>
 
 <dialog class="lightbox" aria-label="Fotos">
 	<button class="lb-btn lb-close" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
-	<img alt="" />
+	<figure class="lb-figure"><img alt="" /><figcaption class="lb-caption"></figcaption></figure>
 	<button class="lb-btn lb-prev" type="button" aria-label="Foto anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg></button>
 	<button class="lb-btn lb-next" type="button" aria-label="Próxima foto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></button>
 	<p class="lb-count" aria-live="polite"></p>
 </dialog>
 
-<script>
-// Phones keep the gallery in the text flow, under the invitation; desktop moves it to the right column.
-const wide = matchMedia("(min-width: 1024px)");
-const gallery = document.getElementById("gallery");
-const invite = document.querySelector(".invite");
-function placeGallery() {
-	if (wide.matches) document.getElementById("visuals").append(gallery);
-	else invite.after(gallery);
-}
-placeGallery();
-wide.addEventListener("change", placeGallery);
-
-// The "Doar todo mês" bar hides while the amounts are on screen.
-const sticky = document.getElementById("sticky");
-new IntersectionObserver(([entry]) => sticky.toggleAttribute("data-hidden", entry.isIntersecting), { threshold: 0.2 })
-	.observe(document.getElementById("valores"));
-sticky.querySelector("a").addEventListener("click", (event) => {
-	event.preventDefault();
-	const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-	document.getElementById("valores").scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-});
-
-// Lightbox over the gallery: the main photo first, then the thumbnails.
-const photos = () => [...document.querySelectorAll(".photo")];
-const box = document.querySelector(".lightbox");
-const big = box.querySelector("img");
-const count = box.querySelector(".lb-count");
-let current = 0;
-function show(index) {
-	const list = photos();
-	current = (index + list.length) % list.length;
-	big.src = list[current].href;
-	big.alt = list[current].querySelector("img").alt;
-	count.textContent = `${current + 1} / ${list.length}`;
-}
-document.querySelectorAll(".photo").forEach((link) =>
-	link.addEventListener("click", (event) => {
-		if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-		event.preventDefault();
-		show(photos().indexOf(link));
-		box.showModal();
-	}),
-);
-box.querySelector(".lb-close").addEventListener("click", () => box.close());
-box.querySelector(".lb-prev").addEventListener("click", () => show(current - 1));
-box.querySelector(".lb-next").addEventListener("click", () => show(current + 1));
-box.addEventListener("click", (event) => { if (event.target === box) box.close(); });
-box.addEventListener("keydown", (event) => {
-	if (event.key === "ArrowLeft") show(current - 1);
-	if (event.key === "ArrowRight") show(current + 1);
-});
-</script>
+<!-- Gallery, sticky bar and lightbox: src/client/ambassador.ts, compiled by the build. -->
+<script type="module" src="/js/ambassador.js"></script>
 </body>
 </html>

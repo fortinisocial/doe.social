@@ -219,3 +219,35 @@ Audited the code against the modern-ECMAScript patterns (ES2023–ES2026).
   - **`atob`/`charCodeAt` in `access.ts` and `btoa(String.fromCharCode(…))` in the tests:** the replacements are `Uint8Array.fromBase64(…, { alphabet: "base64url" })` and `toBase64()`. Node 22.18, which runs the tests, doesn't have them (it checks `undefined`). Revisit when tests run in workerd (`@cloudflare/vitest-plugin`) or on Node with V8 ≥ 14.
   - **`new Promise` in `loadConfetti`:** a real executor wiring `onload`/`onerror`, not resolver hoisting, so `Promise.withResolvers()` doesn't apply.
 - **For README next step 1 (the panel's script to TypeScript):** `nextColour()` shuffles with `[...PALETTE].sort(() => Math.random() - 0.5)`. That's a biased shuffle (a random comparator isn't a valid sort), so it should become Fisher–Yates. Use nothing newer than ES2022 in the panel's browser code until we know which TV browsers it runs on; `toSorted`, Set methods and iterator helpers need recent engines.
+
+## D27 · 2026-10-03 · Answers from the open-questions round
+
+- **Cancelling:** a monthly donor cancels by asking Fortini, by e-mail (contato@fortini.org.br) or the site's contact form. "cancele quando quiser" on the page now links to a `mailto:` with the subject filled in.
+- **No receipt promise:** the page never mentioned receipts, so the question about Stripe's receipt e-mails goes away with the thank-you message (parked).
+- **Copy:**
+  - "Sua doação mensal paga" became "ajuda a pagar".
+  - "10 anos" left the trust line (the logo and the lead already say it).
+  - Separators are written `&nbsp;·` so a wrapped line never starts with "·". The trust line still wraps on desktop (about 600px of text in a 544px column); that was a wrong claim in the critique.
+- **Thumbnails:** exported at 480² as `img/<name>-thumb.webp`. The three went from 487 KB to 144 KB. The 1000² files stay for the A/B prototypes. The skill's export rule changed so the next page doesn't repeat it.
+- **Stripe links:** `client_reference_id` replaces UTMs.
+  - **How:** `src/client/ambassador.ts` adds `client_reference_id=<slug>_<source>` to every `donate.stripe.com` link, where `<source>` is the visit's `?src=`/`?utm_source=`, else the referrer, else `direct`.
+  - **Checked:** in the browser, `whatsapp`, `instagram-stories` and `direct` all come out right, and Stripe serves the link with the parameter.
+  - **Skill:** it was teaching UTMs on Stripe links; that's fixed.
+- **Tracking without Dub (D22):**
+  - City-level location is fine.
+  - Fortini is on **Dub Pro ($30/mo)**, which counts clicks but doesn't tie them to donations; that needs Business ($90/mo).
+  - A redirect route is only needed where we don't control the click: QR codes and printed links. Ambassador pages tag the Stripe link themselves. Name it `/<slug>/qr` rather than `/d/<slug>`, so it sits beside `/<slug>/painel` and `/<slug>/dados`.
+- **Stripe key permissions:**
+  - **Subscriptions read:** the user added it to `STRIPE_API_KEY`. It will be proven by the first real monthly donor.
+  - **Charges read:** possibly added. Subtracting refunds stays pending until that's confirmed.
+- **Panel browser target:** the TVs at events are usually LG (webOS) or Samsung (Tizen), whose browsers vary by model year. That isn't something to ask for. When the panel's script moves to TypeScript, compile it with `target: "es2020"` and use no browser APIs newer than the ones it already uses (`structuredClone`, `??=`), which have already worked at events.
+- **Wrangler:** 4.136.3 → 4.141.0, the newest version past the 7-day quarantine; types regenerated.
+- **`/admin` creating Stripe products and links (D8/D11):** the plan is in `docs/plans/admin-creates-stripe-links.md`, for a later session.
+- **Subtitle and "Por que doar" (user's call):**
+  - **Subtitle:** shortened to one sentence: "Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas." The meta and `og:description` use the same text.
+  - **"Por que doar":** now opens with the reach and says the region once, next to the cities: "Hoje são mais de mil crianças e adolescentes, em 6 cidades da Grande BH."
+  - **New ending:** "…ajuda a pagar essas despesas, como energia, internet e manutenção: a estrutura por trás de todo esse trabalho." It replaces "para que cada oficina continue acontecendo", which implied the workshops depend on the gift.
+  - **Line breaks:** "Grande&nbsp;BH" uses a non-breaking space, so the name never splits across lines.
+- **For this release (user's call):**
+  - **All four amounts use the same filled button,** with no "sugerido" badge. No amount is singled out until there's data to pick one.
+  - **"cancele quando quiser" is plain text again.** The `mailto:` link came out: the page is for winning donors, not for showing the way out. Donors still cancel by asking Fortini (e-mail or contact form).

@@ -4,11 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Fortini Social + Embaixadoras Loucas por Tennis</title>
-<meta name="description" content="Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas. Hoje são mais de mil, em 6 cidades da Grande BH." />
+<meta name="description" content="Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://doe.social/loucas-por-tennis" />
 <meta property="og:title" content="Um convite das Loucas por Tennis · Fortini" />
-<meta property="og:description" content="Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas. Hoje são mais de mil, em 6 cidades da Grande BH." />
+<meta property="og:description" content="Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas." />
 <!-- 1200×630 crop of the main photo: the card WhatsApp shows when the link is shared. -->
 <meta property="og:image" content="https://doe.social/loucas-por-tennis/img/og.webp" />
 <meta property="og:image:width" content="1200" />
@@ -78,31 +78,19 @@ h2 { font-weight: 600; font-size: 1.25rem; line-height: 1.75rem; letter-spacing:
 
 .give { margin-top: 2rem; scroll-margin-top: 1.5rem; }
 .amounts { margin-top: 1rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+/* Every amount is the same filled button: no amount is singled out (no "sugerido" for now). */
 .amounts a {
-	position: relative;
 	display: flex; align-items: center; justify-content: center;
 	min-height: 3.75rem;
 	border-radius: 0.5rem;
-	background: #fff; color: var(--teal);
-	box-shadow: inset 0 0 0 1.5px var(--teal);
+	background: var(--teal); color: #fff;
+	box-shadow: 0 6px 14px -6px rgb(30 115 135 / 0.6);
 	font-size: 1.25rem; font-weight: 600; text-decoration: none; white-space: nowrap;
-	transition: background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+	transition: background-color 150ms ease-out, transform 150ms ease-out;
 }
 .amounts a small { font-size: 0.75em; font-weight: 300; margin-left: 0.1em; }
-/* The suggested amount is the filled one; the badge says "sugerido", never "mais escolhido". */
-.amounts a.suggested { background: var(--teal); color: #fff; box-shadow: 0 6px 14px -6px rgb(30 115 135 / 0.6); }
-.amounts .badge {
-	position: absolute; top: -0.6rem; left: 50%; translate: -50% 0;
-	padding: 0.125rem 0.5rem; border-radius: 999px;
-	background: var(--tint); color: #003b3c;
-	font-size: 0.75rem; font-weight: 600; line-height: 1rem; letter-spacing: 0.01em;
-}
-@media (hover: hover) {
-	.amounts a:hover { background: var(--tint); }
-	.amounts a.suggested:hover { background: var(--teal-hover); }
-}
-.amounts a:active { transform: scale(0.97); }
-.amounts a.suggested:active { background: var(--teal-press); }
+@media (hover: hover) { .amounts a:hover { background: var(--teal-hover); } }
+.amounts a:active { transform: scale(0.97); background: var(--teal-press); }
 
 .micro { margin-top: 0.75rem; color: var(--note); font-size: 0.875rem; line-height: 1.25rem; text-align: center; }
 .micro span { white-space: nowrap; }
@@ -205,30 +193,30 @@ html:has(.lightbox[open]) { overflow: hidden; }
 					<figcaption>Oficina de Tênis em Belo Horizonte</figcaption>
 				</figure>
 				<div class="more">
-					<figure><a class="photo" href="img/full/embaixadoras.webp"><img src="img/embaixadoras.webp" alt="As Loucas por Tennis sentadas com uma aluna da oficina de percussão, que segura baquetas e uma raquete" width="1000" height="1000" loading="lazy" /></a><figcaption>Percussão<span class="where"> em Contagem</span></figcaption></figure>
-					<figure><a class="photo" href="img/full/judo.webp"><img src="img/judo.webp" alt="Alunas de judô de quimono com as Loucas por Tennis" width="1000" height="1000" loading="lazy" /></a><figcaption>Judô<span class="where"> em Contagem</span></figcaption></figure>
-					<figure><a class="photo" href="img/full/beach-tennis.webp"><img src="img/beach-tennis.webp" alt="Turma de beach tennis na areia com raquetes" width="1000" height="1000" loading="lazy" /></a><figcaption>Beach Tennis<span class="where"> em Contagem</span></figcaption></figure>
+					<figure><a class="photo" href="img/full/embaixadoras.webp"><img src="img/embaixadoras-thumb.webp" alt="As Loucas por Tennis sentadas com uma aluna da oficina de percussão, que segura baquetas e uma raquete" width="480" height="480" loading="lazy" /></a><figcaption>Percussão<span class="where"> em Contagem</span></figcaption></figure>
+					<figure><a class="photo" href="img/full/judo.webp"><img src="img/judo-thumb.webp" alt="Alunas de judô de quimono com as Loucas por Tennis" width="480" height="480" loading="lazy" /></a><figcaption>Judô<span class="where"> em Contagem</span></figcaption></figure>
+					<figure><a class="photo" href="img/full/beach-tennis.webp"><img src="img/beach-tennis-thumb.webp" alt="Turma de beach tennis na areia com raquetes" width="480" height="480" loading="lazy" /></a><figcaption>Beach Tennis<span class="where"> em Contagem</span></figcaption></figure>
 				</div>
 			</div>
 
 			<h1>Ajude a transformar vidas</h1>
-			<p class="lead">Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas. Hoje são mais de mil, em 6 cidades da Grande BH.</p>
+			<p class="lead">Há 10 anos, a Fortini leva educação integral, esporte e cultura a crianças e adolescentes de escolas públicas.</p>
 
 			<section class="how">
 				<h2>Por que doar para a Fortini?</h2>
-				<p>As oficinas e a equipe são pagas por leis de incentivo e editais, mas esses recursos não podem cobrir as despesas da sede. Sua doação mensal paga o dia a dia da Fortini, como energia, internet e manutenção, para que cada oficina continue acontecendo.</p>
+				<p>Hoje são mais de mil crianças e adolescentes, em 6 cidades da Grande&nbsp;BH. As oficinas e a equipe são pagas por leis de incentivo e editais, mas esses recursos não podem cobrir as despesas da sede. Sua doação mensal ajuda a pagar essas despesas, como energia, internet e manutenção: a estrutura por trás de todo esse trabalho.</p>
 			</section>
 
 			<section class="give" id="valores" aria-label="Doação mensal">
 				<div class="amounts">
-					<a class="suggested" href="https://donate.stripe.com/dRm9ATakbe2DaseaK7e7m0I?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-50" target="_blank" rel="noopener"><span class="badge">sugerido</span>R$ 50<small>/mês</small></a>
-					<a href="https://donate.stripe.com/eVqaEX0JBbUvcAm6tRe7m0K?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-100" target="_blank" rel="noopener">R$ 100<small>/mês</small></a>
-					<a href="https://donate.stripe.com/4gMaEXbofaQrasebObe7m0L?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-200" target="_blank" rel="noopener">R$ 200<small>/mês</small></a>
-					<a href="https://donate.stripe.com/aFaeVd4ZR7EfeIu4lJe7m0J?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=monthly-400" target="_blank" rel="noopener">R$ 400<small>/mês</small></a>
+					<a href="https://donate.stripe.com/dRm9ATakbe2DaseaK7e7m0I" target="_blank" rel="noopener">R$ 50<small>/mês</small></a>
+					<a href="https://donate.stripe.com/eVqaEX0JBbUvcAm6tRe7m0K" target="_blank" rel="noopener">R$ 100<small>/mês</small></a>
+					<a href="https://donate.stripe.com/4gMaEXbofaQrasebObe7m0L" target="_blank" rel="noopener">R$ 200<small>/mês</small></a>
+					<a href="https://donate.stripe.com/aFaeVd4ZR7EfeIu4lJe7m0J" target="_blank" rel="noopener">R$ 400<small>/mês</small></a>
 				</div>
-				<p class="micro"><span>Cartão de crédito</span> · <span>pagamento seguro via Stripe</span> · <span>cancele quando quiser</span></p>
-				<p class="once">Quer fazer uma doação única? <a href="https://donate.stripe.com/cNi14n4ZRgaLbwi8BZe7m0M?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=one-time" target="_blank" rel="noopener">Clique aqui e escolha o valor</a></p>
-				<p class="trust"><span>10 anos</span> · <span><a href="https://selodoar.org/certificado-fortini-investimento-social/?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-selo-doar" target="_blank" rel="noopener">Selo Doar</a></span> · <span><a href="https://www.otempo.com.br/sports/especializados/2024/12/16/ong-e-destaque-no-premio-do-esporte-mineiro-2024-saiba-os-detalhes?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-esporte-mineiro" target="_blank" rel="noopener">1º lugar no Prêmio do Esporte Mineiro 2024</a></span> · <span><a href="https://premiomelhores.org/resultado-minas-gerais?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-melhores-ongs" target="_blank" rel="noopener">Finalista do Prêmio Melhores ONGs 2025</a></span></p>
+				<p class="micro"><span>Cartão de crédito</span>&nbsp;· <span>pagamento seguro via Stripe</span>&nbsp;· <span>cancele quando quiser</span></p>
+				<p class="once">Quer fazer uma doação única? <a href="https://donate.stripe.com/cNi14n4ZRgaLbwi8BZe7m0M" target="_blank" rel="noopener">Clique aqui e escolha o valor</a></p>
+				<p class="trust"><span><a href="https://selodoar.org/certificado-fortini-investimento-social/?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-selo-doar" target="_blank" rel="noopener">Selo Doar</a></span>&nbsp;· <span><a href="https://www.otempo.com.br/sports/especializados/2024/12/16/ong-e-destaque-no-premio-do-esporte-mineiro-2024-saiba-os-detalhes?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-esporte-mineiro" target="_blank" rel="noopener">1º lugar no Prêmio do Esporte Mineiro 2024</a></span>&nbsp;· <span><a href="https://premiomelhores.org/resultado-minas-gerais?utm_source=doe.social&amp;utm_medium=referral&amp;utm_campaign=embaixadores-loucas-por-tennis&amp;utm_content=trust-melhores-ongs" target="_blank" rel="noopener">Finalista do Prêmio Melhores ONGs 2025</a></span></p>
 			</section>
 		</div>
 

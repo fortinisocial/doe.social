@@ -46,6 +46,28 @@ must("a", HTMLAnchorElement, sticky).addEventListener("click", (event) => {
 	amounts.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
 });
 
+// Attribution: every Stripe link carries `client_reference_id=<slug>_<source>`, which Stripe stores on the
+// Checkout Session, so each donation can be traced to the channel that brought the visitor. UTMs on a
+// payment link would do nothing: Stripe only forwards them to a post-payment redirect, which we don't use.
+// The source is the link's own tag (`?src=whatsapp` or `?utm_source=…`), else the referring site, else "direct".
+// Stripe accepts letters, digits, `-` and `_`, up to 200 characters; anything else is dropped here.
+const reference = (value: string): string =>
+	value
+		.toLowerCase()
+		.replace(/[^a-z0-9_-]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 60);
+const params = new URLSearchParams(location.search);
+const referrer = document.referrer ? new URL(document.referrer).hostname.replace(/^(www|l|lm|m)\./, "") : "";
+const source = reference(params.get("src") ?? params.get("utm_source") ?? referrer) || "direct";
+const slug = reference(location.pathname.split("/").find(Boolean) ?? "");
+for (const link of document.querySelectorAll("a[href^='https://donate.stripe.com/']")) {
+	if (!(link instanceof HTMLAnchorElement)) continue;
+	const url = new URL(link.href);
+	url.searchParams.set("client_reference_id", `${slug}_${source}`);
+	link.href = url.toString();
+}
+
 // Lightbox over the gallery: the main photo first, then the thumbnails. Each shows its own caption.
 // Checked with instanceof, not `querySelectorAll<HTMLAnchorElement>`, which would only claim the type.
 const photos = (): HTMLAnchorElement[] =>

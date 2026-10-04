@@ -5,8 +5,19 @@ interface AdminView {
 	user: string;
 	pages: PageConfig[];
 	/** Values to refill the form with — after an error, or when editing. */
-	form?: { link?: string; slug?: string; title?: string; goal?: string; editing?: boolean; shortLink?: string; monthly?: boolean };
+	form?:
+		| {
+				link?: string;
+				slug?: string;
+				title?: string;
+				goal?: string;
+				editing?: boolean;
+				shortLink?: string | undefined;
+				monthly?: boolean;
+		  }
+		| undefined;
 	error?: string;
+	/** Trusted HTML: callers escape anything that came from a person or an API. */
 	notice?: string;
 }
 

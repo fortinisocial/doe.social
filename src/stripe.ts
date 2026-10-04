@@ -1,12 +1,14 @@
 /**
  * Read-only Stripe access. The restricted key needs Checkout Sessions,
  * Payment Intents, Payment Links and Subscriptions read — nothing else.
+ *
+ * Every response is checked against a schema of just the fields used here, so
+ * a change on Stripe's side fails loudly at the edge instead of deep inside.
  */
+import * as v from "valibot";
 
-export interface PaymentLink {
-	id: string;
-	url: string;
-}
+const PaymentLinkSchema = v.object({ id: v.string(), url: v.string() });
+export type PaymentLink = v.InferOutput<typeof PaymentLinkSchema>;
 
 /** A paid donation, stripped of anything that identifies the donor. */
 export interface Donation {
@@ -15,44 +17,55 @@ export interface Donation {
 	paidAt: number;
 }
 
-interface StripeList<T> {
-	data: T[];
-	has_more: boolean;
+/** Stripe's list envelope around any object. */
+function listOf<TItem extends v.GenericSchema>(item: TItem) {
+	return v.object({ data: v.array(item), has_more: v.boolean() });
 }
 
-interface Subscription {
-	status: "active" | "past_due" | "unpaid" | "canceled" | "incomplete" | "incomplete_expired" | "trialing" | "paused";
-	items: {
-		data: {
-			quantity?: number;
-			price: { unit_amount: number | null; recurring: { interval: "day" | "week" | "month" | "year"; interval_count: number } | null };
-		}[];
-	};
-}
+const IntervalSchema = v.picklist(["day", "week", "month", "year"]);
 
-interface CheckoutSession {
-	id: string;
-	amount_total: number | null;
-	currency: string | null;
-	created: number;
-	mode?: "payment" | "subscription" | "setup";
-	payment_status: "paid" | "unpaid" | "no_payment_required";
-	payment_intent: { created: number } | string | null;
-	subscription?: Subscription | string | null;
-}
+const SubscriptionSchema = v.object({
+	// A plain string: a status Stripe adds later must not break the whole list. Only "active" counts.
+	status: v.string(),
+	items: v.object({
+		data: v.array(
+			v.object({
+				quantity: v.nullish(v.number()),
+				price: v.object({
+					unit_amount: v.nullable(v.number()),
+					recurring: v.nullable(v.object({ interval: IntervalSchema, interval_count: v.number() })),
+				}),
+			}),
+		),
+	}),
+});
+type Subscription = v.InferOutput<typeof SubscriptionSchema>;
 
-async function stripeGet<T>(
+const CheckoutSessionSchema = v.object({
+	id: v.string(),
+	amount_total: v.nullable(v.number()),
+	created: v.number(),
+	mode: v.string(),
+	payment_status: v.string(),
+	// Expanded into an object when asked for (`expand[]`), a bare id otherwise.
+	payment_intent: v.nullish(v.union([v.object({ created: v.number() }), v.string()])),
+	subscription: v.nullish(v.union([SubscriptionSchema, v.string()])),
+});
+type CheckoutSession = v.InferOutput<typeof CheckoutSessionSchema>;
+
+async function stripeGet<TSchema extends v.GenericSchema>(
 	key: string,
 	path: string,
 	params: URLSearchParams,
-): Promise<T> {
-	const response = await fetch(`https://api.stripe.com/v1/${path}?${params}`, {
+	schema: TSchema,
+): Promise<v.InferOutput<TSchema>> {
+	const response = await fetch(`https://api.stripe.com/v1/${path}?${params.toString()}`, {
 		headers: { Authorization: `Bearer ${key}` },
 	});
 	if (!response.ok) {
 		throw new Error(`stripe ${path} ${response.status}`);
 	}
-	return response.json();
+	return v.parse(schema, await response.json());
 }
 
 /**
@@ -70,15 +83,12 @@ export function paymentLinkCode(url: string): string | undefined {
 }
 
 /** Stripe has no lookup by URL, so walk the links and match the code. */
-export async function findPaymentLink(
-	key: string,
-	code: string,
-): Promise<PaymentLink | undefined> {
+export async function findPaymentLink(key: string, code: string): Promise<PaymentLink | undefined> {
 	let startingAfter: string | undefined;
 	for (;;) {
 		const params = new URLSearchParams({ limit: "100" });
 		if (startingAfter) params.set("starting_after", startingAfter);
-		const page = await stripeGet<StripeList<PaymentLink>>(key, "payment_links", params);
+		const page = await stripeGet(key, "payment_links", params, listOf(PaymentLinkSchema));
 		const match = page.data.find((link) => paymentLinkCode(link.url) === code);
 		if (match) return { id: match.id, url: match.url };
 		if (!page.has_more) return undefined;
@@ -86,11 +96,7 @@ export async function findPaymentLink(
 	}
 }
 
-async function listCompletedSessions(
-	key: string,
-	paymentLinkId: string,
-	expand: string,
-): Promise<CheckoutSession[]> {
+async function listCompletedSessions(key: string, paymentLinkId: string, expand: string): Promise<CheckoutSession[]> {
 	const sessions: CheckoutSession[] = [];
 	let startingAfter: string | undefined;
 	for (;;) {
@@ -101,7 +107,7 @@ async function listCompletedSessions(
 			"expand[]": expand,
 		});
 		if (startingAfter) params.set("starting_after", startingAfter);
-		const page = await stripeGet<StripeList<CheckoutSession>>(key, "checkout/sessions", params);
+		const page = await stripeGet(key, "checkout/sessions", params, listOf(CheckoutSessionSchema));
 		sessions.push(...page.data);
 		if (!page.has_more) return sessions;
 		startingAfter = page.data.at(-1)?.id;
@@ -114,10 +120,7 @@ async function listCompletedSessions(
  * time is when the donor confirmed — the session's own `created` is when
  * they opened the page, which can be minutes earlier.
  */
-export async function listDonations(
-	key: string,
-	paymentLinkId: string,
-): Promise<Donation[]> {
+export async function listDonations(key: string, paymentLinkId: string): Promise<Donation[]> {
 	const donations: Donation[] = [];
 	for (const session of await listCompletedSessions(key, paymentLinkId, "data.payment_intent")) {
 		if (session.payment_status !== "paid" || !session.amount_total) continue;
@@ -131,7 +134,10 @@ export async function listDonations(
 }
 
 // How many of each billing interval fit in a month.
-const PER_MONTH = { day: 365 / 12, week: 52 / 12, month: 1, year: 1 / 12 } as const;
+const PER_MONTH = { day: 365 / 12, week: 52 / 12, month: 1, year: 1 / 12 } satisfies Record<
+	v.InferOutput<typeof IntervalSchema>,
+	number
+>;
 
 /** What a subscription brings in per month, whatever its billing interval. */
 function monthlyCents(subscription: Subscription): number {
@@ -150,14 +156,11 @@ function monthlyCents(subscription: Subscription): number {
  * `amountCents` is what it brings in per month; `paidAt` is when they signed up.
  * Needs Subscriptions read on the key (the subscription is expanded).
  */
-export async function listMonthlyDonors(
-	key: string,
-	paymentLinkId: string,
-): Promise<Donation[]> {
+export async function listMonthlyDonors(key: string, paymentLinkId: string): Promise<Donation[]> {
 	const donors: Donation[] = [];
 	for (const session of await listCompletedSessions(key, paymentLinkId, "data.subscription")) {
 		const subscription = session.subscription;
-		if (session.mode !== "subscription" || typeof subscription !== "object" || !subscription) continue;
+		if (session.mode !== "subscription" || typeof subscription !== "object" || subscription === null) continue;
 		if (subscription.status !== "active") continue;
 		const amountCents = monthlyCents(subscription);
 		if (amountCents) donors.push({ amountCents, paidAt: session.created });

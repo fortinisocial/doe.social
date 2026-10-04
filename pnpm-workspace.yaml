@@ -7,3 +7,9 @@ allowBuilds:
 # exercitada por ninguém, e supply chain attack se descobre nos primeiros dias.
 # Em minutos, que é a unidade do pnpm.
 minimumReleaseAge: 10080
+
+# Exceção pedida em 2026-10-03: Vite+ 1.0.0 saiu em 2026-09-28 (D23).
+# Remover depois de 2026-10-05, quando a quarentena já cobre a versão.
+minimumReleaseAgeExclude:
+  - vite-plus
+  - "@voidzero-dev/vite-plus-*"

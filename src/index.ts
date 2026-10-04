@@ -1,4 +1,6 @@
+import * as v from "valibot";
 import { accessUser } from "./access";
+import type { Background, Bindings } from "./bindings";
 import { createDubLink, deleteDubLink, findDubLinkFor, findDubLinksFor, getDubLink } from "./dub";
 import {
 	cadenceOf,
@@ -7,10 +9,12 @@ import {
 	listPages,
 	parseReais,
 	summarize,
+	SummarySchema,
 	validSlug,
 	type PageConfig,
 	type Summary,
 } from "./pages";
+import { log } from "./log";
 import { findPaymentLink, listDonations, listMonthlyDonors, paymentLinkCode } from "./stripe";
 import { renderAdmin } from "./views/admin";
 import { escapeHtml } from "./views/shared";
@@ -19,10 +23,6 @@ import { renderLive } from "./views/live";
 const HOME = "https://fortini.org.br/doe";
 // Many screens can watch one page; Stripe is asked at most once per window per colo.
 const SUMMARY_TTL_SECONDS = 5;
-
-function log(event: string, fields: Record<string, unknown> = {}): void {
-	console.log(JSON.stringify({ event, ...fields }));
-}
 
 // Panels, their data and /admin stay out of search engines and AI crawlers.
 const NO_INDEX = "noindex, nofollow, noarchive";
@@ -45,17 +45,13 @@ function json(body: unknown, status = 200): Response {
 	return Response.json(body, { status, headers: { "Cache-Control": "no-store", "X-Robots-Tag": NO_INDEX } });
 }
 
-async function cachedSummary(
-	env: Env,
-	ctx: ExecutionContext,
-	page: PageConfig,
-): Promise<Summary> {
+async function cachedSummary(env: Bindings, ctx: Background, page: PageConfig): Promise<Summary> {
 	const cadence = cadenceOf(page);
 	const ids = linkIdsOf(page);
 	const cache = caches.default;
 	const cacheKey = new Request(`https://doe.social/__summary/${cadence}/${ids.join(",")}`);
 	const hit = await cache.match(cacheKey);
-	if (hit) return hit.json();
+	if (hit) return v.parse(SummarySchema, await hit.json());
 
 	const list = cadence === "monthly" ? listMonthlyDonors : listDonations;
 	const perLink = await Promise.all(ids.map((id) => list(env.STRIPE_API_KEY, id)));
@@ -77,18 +73,13 @@ function qrTarget(page: PageConfig): string {
 }
 
 /** A campaign can have its own donation page in public/<slug>/ (an ambassador's, say). */
-async function hasDonationPage(env: Env, slug: string): Promise<boolean> {
+async function hasDonationPage(env: Bindings, slug: string): Promise<boolean> {
 	if (!env.ASSETS) return false;
 	const response = await env.ASSETS.fetch(new Request(`https://doe.social/${slug}/`, { method: "HEAD" }));
 	return response.ok;
 }
 
-async function handleLive(
-	env: Env,
-	ctx: ExecutionContext,
-	slug: string,
-	sub: string | undefined,
-): Promise<Response> {
+async function handleLive(env: Bindings, ctx: Background, slug: string, sub: string | undefined): Promise<Response> {
 	const page = await getPage(env.PAGES, slug);
 	if (!page) return Response.redirect(HOME, 302);
 
@@ -100,7 +91,8 @@ async function handleLive(
 			return json({ error: "unavailable" }, 502);
 		}
 	}
-	if (sub !== undefined && sub !== "demo" && sub !== "painel") return Response.redirect(`https://doe.social/${slug}`, 302);
+	if (sub !== undefined && sub !== "demo" && sub !== "painel")
+		return Response.redirect(`https://doe.social/${slug}`, 302);
 
 	let summary: Summary;
 	try {
@@ -124,11 +116,11 @@ async function handleLive(
 }
 
 type Resolved =
-	| { ok: true; paymentLinkId: string; paymentUrl: string; code: string; shortLink?: string }
+	| { ok: true; paymentLinkId: string; paymentUrl: string; code: string; shortLink: string | undefined }
 	| { ok: false; error: string };
 
 /** A pasted link — Stripe or dub.sh — down to the Stripe payment link behind it. */
-async function resolveLink(env: Env, raw: string): Promise<Resolved> {
+async function resolveLink(env: Bindings, raw: string): Promise<Resolved> {
 	let url: URL;
 	try {
 		url = new URL(raw.trim());
@@ -157,7 +149,7 @@ async function resolveLink(env: Env, raw: string): Promise<Resolved> {
 
 /** Reuse a short link already pointing at the payment; otherwise create dub.sh/<slug>. */
 async function ensureShortLink(
-	env: Env,
+	env: Bindings,
 	slug: string,
 	resolved: Extract<Resolved, { ok: true }>,
 ): Promise<{ shortLink?: string; note?: string }> {
@@ -183,7 +175,7 @@ async function ensureShortLink(
  * so one renamed or deleted in Dub would leave a dead link and QR on screen;
  * saving the page picks up the change. If Dub can't be reached, keep what we have.
  */
-async function currentShortLink(env: Env, page: PageConfig): Promise<string | undefined> {
+async function currentShortLink(env: Bindings, page: PageConfig): Promise<string | undefined> {
 	const code = paymentLinkCode(page.paymentUrl);
 	if (!code) return page.shortLink;
 	try {
@@ -199,7 +191,7 @@ async function currentShortLink(env: Env, page: PageConfig): Promise<string | un
  * Removes a page and, if asked, its dub.sh link — but only a link that points
  * at this page's payment link and that no other page still shows.
  */
-async function handleDelete(env: Env, user: string, slug: string, withDub: boolean): Promise<Response> {
+async function handleDelete(env: Bindings, user: string, slug: string, withDub: boolean): Promise<Response> {
 	const page = await getPage(env.PAGES, slug);
 	const done = async (status: number, message: { error?: string; notice?: string }) =>
 		html(renderAdmin({ user, pages: await listPages(env.PAGES), ...message }), status);
@@ -230,7 +222,13 @@ async function handleDelete(env: Env, user: string, slug: string, withDub: boole
 	return done(200, { notice: `Página doe.social/${escapeHtml(slug)} excluída.${escapeHtml(dubNote)}` });
 }
 
-async function handleAdmin(request: Request, env: Env): Promise<Response> {
+/** A text field from the admin form. A file sent in its place counts as empty, never "[object File]". */
+function field(data: FormData, name: string): string {
+	const value = data.get(name);
+	return typeof value === "string" ? value : "";
+}
+
+async function handleAdmin(request: Request, env: Bindings): Promise<Response> {
 	const user = await accessUser(request, env);
 	if (!user) return new Response("Acesso restrito.", { status: 403 });
 
@@ -265,19 +263,20 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 
 	const data = await request.formData();
 	if (data.get("action") === "delete") {
-		return handleDelete(env, user, String(data.get("slug") ?? ""), data.get("dub") === "1");
+		return handleDelete(env, user, field(data, "slug"), data.get("dub") === "1");
 	}
 	const form = {
-		link: String(data.get("link") ?? ""),
-		slug: String(data.get("slug") ?? "").trim().toLowerCase(),
-		title: String(data.get("title") ?? "").trim(),
-		goal: String(data.get("goal") ?? "").trim(),
+		link: field(data, "link"),
+		slug: field(data, "slug").trim().toLowerCase(),
+		title: field(data, "title").trim(),
+		goal: field(data, "goal").trim(),
 		editing: data.get("editing") === "1",
 	};
 	const fail = async (error: string, status = 400) =>
 		html(renderAdmin({ user, pages: await listPages(env.PAGES), form, error }), status);
 
-	if (!validSlug(form.slug)) return fail("Endereço inválido: use letras minúsculas, números e hífen, ou esse nome é reservado.");
+	if (!validSlug(form.slug))
+		return fail("Endereço inválido: use letras minúsculas, números e hífen, ou esse nome é reservado.");
 	if (!form.title) return fail("Dê um título para a página.");
 	const goalCents = form.goal ? parseReais(form.goal) : undefined;
 	if (form.goal && goalCents === undefined) return fail("Meta inválida. Use só números, como 30.000.");
@@ -331,21 +330,24 @@ async function handleAdmin(request: Request, env: Env): Promise<Response> {
 		renderAdmin({
 			user,
 			pages: await listPages(env.PAGES),
-			notice: `Página <a href="/${form.slug}" target="_blank">doe.social/${form.slug}</a> criada.${note ? ` ${note.replace(/</g, "&lt;")}` : ""}`,
+			notice: `Página <a href="/${form.slug}" target="_blank">doe.social/${form.slug}</a> criada.${note ? ` ${escapeHtml(note)}` : ""}`,
 		}),
 	);
 }
 
-export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		const url = new URL(request.url);
-		const [first, second, ...rest] = url.pathname.split("/").filter(Boolean);
+/** Every request to doe.social that isn't a static file. Tests call this with fake bindings. */
+export async function handle(request: Request, env: Bindings, ctx: Background): Promise<Response> {
+	const url = new URL(request.url);
+	const [first, second, ...rest] = url.pathname.split("/").filter(Boolean);
 
-		if (!first) return Response.redirect(HOME, 301);
-		if (first === "admin" && !second) return handleAdmin(request, env);
-		if (rest.length || (request.method !== "GET" && request.method !== "HEAD") || !validSlug(first.toLowerCase())) {
-			return Response.redirect(HOME, 302);
-		}
-		return handleLive(env, ctx, first.toLowerCase(), second);
-	},
+	if (!first) return Response.redirect(HOME, 301);
+	if (first === "admin" && !second) return handleAdmin(request, env);
+	if (rest.length || (request.method !== "GET" && request.method !== "HEAD") || !validSlug(first.toLowerCase())) {
+		return Response.redirect(HOME, 302);
+	}
+	return handleLive(env, ctx, first.toLowerCase(), second);
+}
+
+export default {
+	fetch: (request, env, ctx) => handle(request, env, ctx),
 } satisfies ExportedHandler<Env>;

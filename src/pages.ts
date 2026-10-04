@@ -1,32 +1,39 @@
+import * as v from "valibot";
+import type { PageStore } from "./bindings";
+import { log } from "./log";
 import type { Donation } from "./stripe";
 
 /** One-time gifts add up to a total; monthly donors add up to R$ per month. */
-export type Cadence = "once" | "monthly";
+const CadenceSchema = v.picklist(["once", "monthly"]);
+export type Cadence = v.InferOutput<typeof CadenceSchema>;
 
-export interface PageConfig {
-	slug: string;
-	title: string;
+/** A page config as stored in KV. Read through `getPage`, which checks it against this schema. */
+export const PageConfigSchema = v.object({
+	slug: v.string(),
+	title: v.string(),
 	/** Goal in cents (per month for a monthly campaign); absent means no goal. */
-	goalCents?: number;
+	goalCents: v.optional(v.number()),
 	/** Absent means "once": pages created before monthly campaigns existed. */
-	cadence?: Cadence;
+	cadence: v.optional(CadenceSchema),
 	/** The link the QR and the button lead to when there is no donation page. */
-	paymentLinkId: string;
-	paymentUrl: string;
+	paymentLinkId: v.string(),
+	paymentUrl: v.string(),
 	/** Every payment link whose donations count; absent means just `paymentLinkId`. */
-	paymentLinkIds?: string[];
+	paymentLinkIds: v.optional(v.array(v.string())),
 	/** Dub short link; absent when Dub was unavailable, then the QR uses paymentUrl. */
-	shortLink?: string;
-	createdAt: string;
-}
+	shortLink: v.optional(v.string()),
+	createdAt: v.string(),
+});
+export type PageConfig = v.InferOutput<typeof PageConfigSchema>;
 
 /** What the public page receives — amounts and times only, never who. */
-export interface Summary {
-	totalCents: number;
-	count: number;
+export const SummarySchema = v.object({
+	totalCents: v.number(),
+	count: v.number(),
 	/** `paidAt` rounded down to the minute; the browser formats it relative to its own today. */
-	recent: { amountCents: number; paidAt: number }[];
-}
+	recent: v.array(v.object({ amountCents: v.number(), paidAt: v.number() })),
+});
+export type Summary = v.InferOutput<typeof SummarySchema>;
 
 export const RECENT_LIMIT = 12;
 
@@ -36,16 +43,7 @@ export const linkIdsOf = (page: PageConfig): string[] => page.paymentLinkIds ?? 
 // Paths the Worker or the static assets already own. A campaign's own donation
 // page (public/<slug>/) is not here: it shares the slug with its campaign, and
 // the panel then lives at /<slug>/painel.
-const RESERVED = new Set([
-	"admin",
-	"api",
-	"fonts",
-	"img",
-	"redesoma",
-	"favicon.ico",
-	"robots.txt",
-	"site.webmanifest",
-]);
+const RESERVED = new Set(["admin", "api", "fonts", "img", "redesoma", "favicon.ico", "robots.txt", "site.webmanifest"]);
 
 export function validSlug(slug: string): boolean {
 	return /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/.test(slug) && !RESERVED.has(slug);
@@ -72,14 +70,21 @@ export function parseReais(input: string): number | undefined {
 	return Math.round(value * 100);
 }
 
-export async function getPage(kv: KVNamespace, slug: string): Promise<PageConfig | null> {
-	return kv.get<PageConfig>(slug, "json");
+/**
+ * The page stored under `slug`, or null. A config that doesn't match the schema
+ * (hand-written in KV, say) is logged and treated as missing rather than trusted.
+ */
+export async function getPage(kv: PageStore, slug: string): Promise<PageConfig | null> {
+	const stored = await kv.get(slug, "json");
+	if (stored === null) return null;
+	const page = v.safeParse(PageConfigSchema, stored);
+	if (page.success) return page.output;
+	log("page_invalid", { slug, issues: v.flatten(page.issues).nested });
+	return null;
 }
 
-export async function listPages(kv: KVNamespace): Promise<PageConfig[]> {
+export async function listPages(kv: PageStore): Promise<PageConfig[]> {
 	const { keys } = await kv.list();
 	const pages = await Promise.all(keys.map((k) => getPage(kv, k.name)));
-	return pages
-		.filter((p): p is PageConfig => p !== null)
-		.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+	return pages.filter((p) => p !== null).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

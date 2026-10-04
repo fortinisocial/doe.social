@@ -16,9 +16,7 @@ const brl = new Intl.NumberFormat("pt-BR", {
 /** R$ with cents only when there are cents: "R$ 450", "R$ 12,50". */
 export function formatReais(cents: number): string {
 	if (cents % 100 === 0) return brl.format(cents / 100);
-	return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-		cents / 100,
-	);
+	return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
 // Neris ships only 300 / 600 / 900 — no 400 or 700 exist, so never ask for them.

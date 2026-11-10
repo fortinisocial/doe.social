@@ -251,3 +251,12 @@ Audited the code against the modern-ECMAScript patterns (ES2023–ES2026).
 - **For this release (user's call):**
   - **All four amounts use the same filled button,** with no "sugerido" badge. No amount is singled out until there's data to pick one.
   - **"cancele quando quiser" is plain text again.** The `mailto:` link came out: the page is for winning donors, not for showing the way out. Donors still cancel by asking Fortini (e-mail or contact form).
+
+## D28 · 2026-10-06 · A campaign setup module behind /admin, as a pure refactor first
+
+The architecture review of 2026-10-03 (candidate 01) found `handleAdmin` mixing HTTP with the campaign lifecycle, and `dub.ts` shallow while the short link rules sat in `index.ts`. The plan is in `docs/plans/campaign-setup-module.md`.
+
+- **Decided:** a new `src/campaign-setup.ts` for create, edit and delete. It takes raw form strings and returns typed outcomes; `views/admin.ts` turns them into Portuguese text. `dub.ts` is deepened in place into the short link module. Tests keep the `fetch` stubs. Behavior doesn't change, and create gets tests before any code moves.
+- **Why:** lifecycle rules in one module, tested without forging an Access JWT. D8 (admin creates Stripe links) gets a place to go. Escaping happens once, in the view.
+- **Rejected:** shipping it together with D8 (a refactor and a behavior change in one diff); the module returning Portuguese notes (copy in domain code, tests asserting sentences); injecting Stripe/Dub ports now (revisit with D8); keeping the short link rules private to campaign setup, or in a new file over `dub.ts`; the names `campaigns.ts` and `admin.ts`.
+- **Commits:** none yet.
